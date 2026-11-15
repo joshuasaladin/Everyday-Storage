@@ -260,6 +260,44 @@ const stamp = String(Date.now()).slice(-6);
     await c.close();
   });
 
+  await step("signing from the emailed link ends on a thank-you page with the signed copy", async () => {
+    // a fresh unit + agreement awaiting signature
+    await page.goto(`${base}/units/new`);
+    await page.fill('input[name="unit_number"]', `S${stamp}`);
+    await page.fill('input[name="monthly_price"]', "80.00");
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/\/units\/[0-9a-f-]{36}$/);
+    const unitId = page.url().split("/").pop();
+    await page.goto(`${base}/agreements/new?unit=${unitId}&renter=${renterUrl.split("/").pop()}`);
+    await page.click('button:has-text("Create agreement")');
+    await page.waitForURL(/\/agreements\/[0-9a-f-]{36}$/);
+    await page.click('button:has-text("Send signing link")');
+    const text = await page.locator("text=/\\/sign\\//").first().innerText();
+    const link = text.match(/https?:\/\/\S+\/sign\/\S+/)[0];
+
+    const c = await context();
+    const p = await c.newPage();
+    await p.goto(link);
+    const box = await p.locator("canvas").boundingBox();
+    await p.mouse.move(box.x + 20, box.y + 70);
+    await p.mouse.down();
+    for (let i = 0; i < 10; i++) await p.mouse.move(box.x + 30 + i * 25, box.y + 70 + (i % 2 ? -25 : 25), { steps: 3 });
+    await p.mouse.up();
+    await p.check('input[name="agree"]');
+    await p.click('button:has-text("Sign agreement")');
+    await p.waitForSelector("text=Thank you for signing!");
+    if (await p.locator("text=no longer valid").count()) throw new Error("shows 'no longer valid' after signing");
+    await shot("20-signed-thank-you", p);
+    const pdf = await p.request.get(`${link}/pdf`);
+    if (pdf.status() !== 200 || !(await pdf.body()).subarray(0, 4).equals(Buffer.from("%PDF"))) throw new Error(`signed copy returned ${pdf.status()}`);
+    await p.goto(link); // coming back later still thanks them, and cannot sign twice
+    await p.waitForSelector("text=Thank you for signing!");
+    if (await p.locator('button:has-text("Sign agreement")').count()) throw new Error("can sign twice");
+    const bad = await p.request.get(`${base}/sign/not-a-real-token/pdf`);
+    if (bad.status() !== 404) throw new Error(`unknown token pdf returned ${bad.status()}`);
+    await c.close();
+  });
+
   await step("customers cannot sign in", async () => {
     const c = await context();
     const p = await c.newPage();

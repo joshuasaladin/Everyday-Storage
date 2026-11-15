@@ -181,10 +181,13 @@ export function signAgreement(db: DB, actor: Actor, agreementId: string, sig: Si
     const stamp = nowIso();
     db.run(
       `UPDATE agreements SET status = 'active', signed_at = ?, signed_name = ?, signed_method = ?, signature_png = ?,
-              signed_ip = ?, signed_user_agent = ?, sign_token_hash = NULL, sign_token_expires = NULL,
+              signed_ip = ?, signed_user_agent = ?,
+              -- the signing link stays usable for 30 days to show the thank-you page and the signed copy;
+              -- it cannot sign again, because the agreement is no longer awaiting a signature
+              sign_token_expires = CASE WHEN sign_token_hash IS NULL THEN NULL ELSE ? END,
               next_period_start = start_date, updated_at = ?
         WHERE id = ?`,
-      [stamp, sig.name.trim(), sig.method, sig.signature_png ?? null, sig.ip ?? null, sig.user_agent?.slice(0, 300) ?? null, stamp, agreementId],
+      [stamp, sig.name.trim(), sig.method, sig.signature_png ?? null, sig.ip ?? null, sig.user_agent?.slice(0, 300) ?? null, addDays(today(), 30), stamp, agreementId],
     );
     db.run(`UPDATE renters SET status = 'active', updated_at = ? WHERE id = ?`, [stamp, ag.renter_id]);
     syncUnitStatus(db, ag.unit_id);
