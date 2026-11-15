@@ -21,7 +21,7 @@ export default async function PortalPage() {
   const renter = db.one<Record<string, any>>(`SELECT first_name, last_name, company, kind FROM renters WHERE id = ?`, [renterId])!;
   const bal = renterBalance(db, renterId);
   const agreements = db.all<Record<string, any>>(
-    `SELECT a.*, u.unit_number, u.width_ft, u.depth_ft, u.height_ft, u.location, u.features, f.name AS facility_name, f.address AS facility_address,
+    `SELECT a.*, u.unit_number, u.width_m, u.depth_m, u.height_m, u.location, u.features, f.name AS facility_name, f.address AS facility_address,
             (SELECT m.status || '|' || m.move_out_date FROM move_outs m WHERE m.agreement_id = a.id AND m.status IN ('requested','scheduled') LIMIT 1) AS move_out
        FROM agreements a JOIN units u ON u.id = a.unit_id JOIN facilities f ON f.id = a.facility_id
       WHERE a.renter_id = ? AND a.status IN ('active','pending_signature','ended') ORDER BY (a.status = 'ended'), a.start_date DESC`,

@@ -22,7 +22,7 @@ lib/
   auth.ts guard.ts roles.ts api.ts     sessions, capabilities, authorisation
   units.ts renters.ts agreements.ts    domain rules
   billing.ts payments.ts               invoices, proration, late fees, credits, payments, refunds, deposits
-  reservations.ts maintenance.ts files.ts
+  reservations.ts files.ts migrate.ts origin.ts
   jobs.ts email.ts gateway.ts pdf.ts   automations, outbox, payment gateway hook, PDFs
   reports.ts report-data.ts            every figure on the dashboard and reports
   actions/          server actions, one file per area — the only write path
@@ -44,9 +44,7 @@ facilities ─┬─ units ─────────────┬─ agreeme
             │      │                             │      └─ credit_applications ── credits
             │      └─ users (portal login)       ├─ deposit_transactions      (liability ledger)
             │                                    ├─ agreement_renewals
-            ├─ reservations (hold or waitlist)   └─ move_outs
-            ├─ maintenance_tickets ── expenses
-            └─ expenses
+            └─ reservations (hold or waitlist)   └─ move_outs
 
 documents (entity, entity_id)   audit_log   settings   taxes   counters
 automations   jobs   email_outbox   payment_requests   gateway_events
@@ -91,7 +89,7 @@ prorated first partial month.
 | Phase | Scope | Status |
 |---|---|---|
 | 1 — Core | Auth & roles, facilities, units, facility map, renters, agreements, invoicing, payments, deposits, dashboard, reports, audit log | Built |
-| 2 — Operations | Automations & job queue, email outbox, PDF invoices/receipts/agreements, maintenance, expenses, reservations & waitlist, CSV/PDF export, settings | Built |
+| 2 — Operations | Automations & job queue, email outbox, PDF invoices/receipts/agreements, reservations & waitlist, CSV/PDF export, settings | Built |
 | 3 — Customers | Customer portal, built-in e-signature, public reservation page | Built |
 | 4 — Integrations | Payment gateway (hook + signed webhook ready; needs a provider account), real email provider credentials, external e-sign provider (fields reserved), SMS/WhatsApp reminders, accounting export | Integration points in place |
 | 5 — Scale | Postgres instead of SQLite if more than one server is needed (SQL is confined to `lib/`), S3 for documents (`lib/files.ts`), per-facility user scoping, 2-factor sign-in | Not started |

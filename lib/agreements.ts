@@ -96,7 +96,6 @@ export function unitAvailableFor(db: DB, unitId: string, ignoreReservationId?: s
   if (!unit) return "Choose a unit.";
   if (db.one(`SELECT 1 FROM agreements WHERE unit_id = ? AND status IN ('active','pending_signature')`, [unitId]))
     return `Unit ${unit.unit_number} is already under an agreement.`;
-  if (unit.status === "maintenance") return `Unit ${unit.unit_number} is blocked by a maintenance ticket.`;
   if (unit.offline) return `Unit ${unit.unit_number} is switched offline.`;
   const hold = db.one<{ id: string; name: string }>(
     `SELECT id, name FROM reservations WHERE unit_id = ? AND status IN ('pending','confirmed')`,

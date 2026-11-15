@@ -81,6 +81,9 @@ export function ensureDefaults(db: DB): void {
 
 export function bootstrap(db: DB): void {
   ensureDefaults(db);
+  // statuses are derived; recompute once per boot in case the rules changed
+  const { syncAllUnits } = require("./units") as typeof import("./units");
+  syncAllUnits(db);
 
   if (db.workspace === "demo") {
     if (!db.one(`SELECT 1 FROM users LIMIT 1`)) {

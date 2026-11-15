@@ -4,6 +4,7 @@ import { Card, Chip, EmptyState, Field, PageHeader, StatusChip, Tabs } from "@/c
 import { ActionForm, ConfirmButton, CopyButton, ModalForm } from "@/components/forms";
 import { exportUrl, Toolbar } from "@/components/table";
 import { requireStaff, scope } from "@/lib/auth";
+import { appOrigin } from "@/lib/origin";
 import { can } from "@/lib/roles";
 import { reservationAction, saveReservationAction } from "@/lib/actions/ops";
 import { RESERVATION_STATUSES } from "@/lib/reservations";
@@ -32,7 +33,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
   if (term) { where.push(`(res.name LIKE ? ESCAPE '\\' OR res.email LIKE ? ESCAPE '\\' OR res.phone LIKE ? ESCAPE '\\' OR res.reservation_no LIKE ? ESCAPE '\\' OR u.unit_number LIKE ? ESCAPE '\\')`); params.push(...Array(5).fill(like(term))); }
   if (param(query, "source")) { where.push("res.source = ?"); params.push(param(query, "source")); }
   const rows = db.all<Record<string, any>>(
-    `SELECT res.*, u.unit_number, u.width_ft, u.depth_ft, u.height_ft, u.monthly_price_cents, f.name AS facility_name
+    `SELECT res.*, u.unit_number, u.width_m, u.depth_m, u.height_m, u.monthly_price_cents, f.name AS facility_name
        FROM reservations res JOIN facilities f ON f.id = res.facility_id LEFT JOIN units u ON u.id = res.unit_id
       WHERE ${where.join(" AND ")}${s.sql} ORDER BY CASE res.status WHEN 'pending' THEN 0 WHEN 'confirmed' THEN 1 ELSE 2 END, COALESCE(res.hold_until, res.desired_start, res.created_at) LIMIT 300`,
     [...params, ...s.params],
@@ -44,18 +45,34 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
   const unitLabel = (u: Record<string, any>) => `${u.unit_number} · ${dims(u)} · ${label(UNIT_TYPES, u.type)} · ${money(u.monthly_price_cents, cur)}/mo${ctx.facilities.length > 1 ? ` · ${u.facility_name}` : ""}`;
   const count = (sql: string) => db.num(`SELECT COUNT(*) FROM reservations res WHERE ${sql}${s.sql}`, s.params);
   const tab = (key: string) => withQuery("/reservations", query, { status: key === "holds" ? null : key, new: null, unit: null });
+  const bookingUrl = `${await appOrigin()}/reserve`;
 
   return (
     <>
       <PageHeader eyebrow="Rentals" title="Reservations and waitlist"
         blurb={`Hold a unit for someone for ${settings.reservation_hold_days} days, keep a waitlist when nothing fits, and turn a hold into a signed agreement.`}
-        actions={
-          <>
-            {settings.public_reservations_enabled && ctx.workspace === "live" && <CopyButton text="/reserve" label="Public booking page: /reserve" />}
-            {edit && <Link href="/reservations?new=1" className="btn btn-primary"><Icon name="plus" />New reservation</Link>}
-          </>
-        }
+        actions={edit && <Link href="/reservations?new=1" className="btn btn-primary"><Icon name="plus" />New reservation</Link>}
       />
+
+      {ctx.workspace === "live" && (
+        <div className="panel p-4 mb-5 flex flex-wrap items-center gap-3">
+          <Icon name="external" className="w-4 h-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Public booking page</div>
+            {settings.public_reservations_enabled ? (
+              <div className="text-sm break-all" style={{ color: "var(--ink-3)" }}>Share this link so customers can reserve a unit or join the waitlist: <a className="link" href={bookingUrl} target="_blank" rel="noopener">{bookingUrl}</a></div>
+            ) : (
+              <div className="text-sm" style={{ color: "var(--ink-3)" }}>Online reservations are switched off. Turn them on under <Link className="link" href="/settings?tab=billing">Settings → Billing rules</Link>.</div>
+            )}
+          </div>
+          {settings.public_reservations_enabled && (
+            <span className="flex gap-2">
+              <CopyButton text={bookingUrl} label="Copy link" />
+              <a href={bookingUrl} target="_blank" rel="noopener" className="btn btn-sm">Open</a>
+            </span>
+          )}
+        </div>
+      )}
 
       {param(query, "new") && edit && (
         <Card title="New reservation" className="mb-5">

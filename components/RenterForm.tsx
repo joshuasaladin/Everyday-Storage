@@ -26,11 +26,7 @@ export default function RenterForm({ renter, canSensitive, next }: { renter?: Re
             <input className="input" type="email" name="email" defaultValue={renter?.email ?? ""} maxLength={254} />
           </Field>
           <Field label="Phone"><input className="input" name="phone" defaultValue={renter?.phone ?? ""} maxLength={40} placeholder="+297 …" /></Field>
-          <Field label="Second phone"><input className="input" name="phone_alt" defaultValue={renter?.phone_alt ?? ""} maxLength={40} /></Field>
-          <div />
           <Field label="Address" className="sm:col-span-2"><input className="input" name="address" defaultValue={renter?.address ?? ""} maxLength={200} /></Field>
-          <Field label="City / district"><input className="input" name="city" defaultValue={renter?.city ?? ""} maxLength={80} /></Field>
-          <Field label="Country"><input className="input" name="country" defaultValue={renter?.country ?? "Aruba"} maxLength={80} /></Field>
         </div>
       </section>
 
@@ -55,13 +51,7 @@ export default function RenterForm({ renter, canSensitive, next }: { renter?: Re
       </section>
 
       <section className="panel p-5">
-        <h2 className="text-sm font-semibold mb-4">Emergency contact</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Name"><input className="input" name="emergency_name" defaultValue={renter?.emergency_name ?? ""} maxLength={120} /></Field>
-          <Field label="Phone"><input className="input" name="emergency_phone" defaultValue={renter?.emergency_phone ?? ""} maxLength={40} /></Field>
-          <Field label="Relationship"><input className="input" name="emergency_relation" defaultValue={renter?.emergency_relation ?? ""} maxLength={60} /></Field>
-        </div>
-        <Field label="Notes" className="mt-4"><textarea className="textarea" name="notes" defaultValue={renter?.notes ?? ""} /></Field>
+        <Field label="Notes"><textarea className="textarea" name="notes" defaultValue={renter?.notes ?? ""} /></Field>
       </section>
     </ActionForm>
   );

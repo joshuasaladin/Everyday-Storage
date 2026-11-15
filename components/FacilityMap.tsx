@@ -10,7 +10,7 @@ import { money } from "@/lib/format";
 export type MapUnit = {
   id: string;
   number: string;
-  status: "available" | "occupied" | "reserved" | "maintenance" | "unavailable";
+  status: "available" | "occupied" | "reserved" | "unavailable";
   type: string;
   size: string;
   dims: string;
@@ -32,7 +32,6 @@ const STATUS: { key: MapUnit["status"]; label: string; mark: string }[] = [
   { key: "available", label: "Available", mark: "" },
   { key: "occupied", label: "Occupied", mark: "●" },
   { key: "reserved", label: "Reserved", mark: "◐" },
-  { key: "maintenance", label: "Maintenance", mark: "✕" },
   { key: "unavailable", label: "Unavailable", mark: "—" },
 ];
 
@@ -136,7 +135,7 @@ export default function FacilityMap({
                   onClick={() => setSelected(selected === u.id && !edit ? null : u.id)}
                 >
                   <span>{u.number}</span>
-                  {(u.w > 1 || u.h > 1) && <span style={{ fontWeight: 500, opacity: 0.85, fontSize: ".62rem" }}>{u.dims.replace(/ × \d+ ft$/, "").replace(" ft", "")}</span>}
+                  {(u.w > 1 || u.h > 1) && <span style={{ fontWeight: 500, opacity: 0.85, fontSize: ".62rem" }}>{u.dims.replace(/ × [\d.]+ m$/, "").replace(" m", "")}</span>}
                   {s.mark && <span aria-hidden style={{ fontSize: ".6rem", lineHeight: 1 }}>{s.mark}</span>}
                 </button>
               );
@@ -163,7 +162,7 @@ export default function FacilityMap({
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm mb-4">
               <div><dt className="label">Size</dt><dd>{current.dims}</dd></div>
-              <div><dt className="label">Area</dt><dd>{current.area} sq ft</dd></div>
+              <div><dt className="label">Area</dt><dd>{current.area} m²</dd></div>
               <div><dt className="label">Type</dt><dd>{current.type}</dd></div>
               <div><dt className="label">Price</dt><dd className="font-semibold">{money(current.price, currency)}<span style={{ color: "var(--ink-3)", fontWeight: 400 }}> /mo</span></dd></div>
               {current.renter && <div className="col-span-2"><dt className="label">{current.status === "reserved" ? "Held for" : "Renter"}</dt><dd>{current.renterId ? <Link className="link" href={`/renters/${current.renterId}`}>{current.renter}</Link> : current.renter}</dd></div>}

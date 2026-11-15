@@ -20,8 +20,8 @@ function setup(opts: { mode?: "anniversary" | "fixed_day"; start?: string; term?
   saveSettings(db, { invoice_lead_days: 0, late_fee_grace_days: 5, late_fee_flat_cents: 2500 });
   const fac = id();
   db.run(`INSERT INTO facilities (id, code, name, created_at, updated_at) VALUES (?, 'T', 'Test', ?, ?)`, [fac, nowIso(), nowIso()]);
-  const unit = createUnit(db, { facility_id: fac, unit_number: "A1", type: "standard", size_label: "small", width_ft: 5, depth_ft: 5, height_ft: 8, location: null, monthly_price_cents: 10000, offline: 0, available_from: null, features: null, notes: null });
-  const renter = createRenter(db, { kind: "individual", first_name: "Test", last_name: "Renter", company: null, email: "t@example.com", phone: null, phone_alt: null, id_type: null, id_number: "A1234567", address: null, city: null, country: null, emergency_name: null, emergency_phone: null, emergency_relation: null, notes: null });
+  const unit = createUnit(db, { facility_id: fac, unit_number: "A1", type: "storage_unit", size_label: "small", width_m: 1.5, depth_m: 3, height_m: 2.4, location: null, monthly_price_cents: 10000, offline: 0, features: null, notes: null });
+  const renter = createRenter(db, { kind: "individual", first_name: "Test", last_name: "Renter", company: null, email: "t@example.com", phone: null, id_type: null, id_number: "A1234567", address: null, notes: null });
   const term = opts.term === undefined ? 12 : opts.term;
   const ag = createAgreement(db, SYSTEM, {
     facility_id: fac, unit_id: unit, renter_id: renter, term_type: term ? "fixed" : "month_to_month", start_date: opts.start ?? "2026-01-15", term_months: term,
@@ -180,7 +180,7 @@ test("reminders are queued once per stage, however often the automation runs", (
 
 test("signing activates the agreement, occupies the unit and bills the first period; voiding hands credit back", () => {
   const { db, fac, renter } = setup();
-  const unit2 = createUnit(db, { facility_id: fac, unit_number: "A2", type: "standard", size_label: "small", width_ft: 5, depth_ft: 5, height_ft: 8, location: null, monthly_price_cents: 8000, offline: 0, available_from: null, features: null, notes: null });
+  const unit2 = createUnit(db, { facility_id: fac, unit_number: "A2", type: "storage_unit", size_label: "small", width_m: 1.5, depth_m: 3, height_m: 2.4, location: null, monthly_price_cents: 8000, offline: 0, features: null, notes: null });
   const ag2 = createAgreement(db, SYSTEM, { facility_id: fac, unit_id: unit2, renter_id: renter, term_type: "month_to_month", start_date: "2026-03-10", term_months: null, monthly_rate_cents: 8000, deposit_cents: 0, discount_cents: 0, discount_note: null, billing_mode: "anniversary", billing_day: 1, prorate_first: 1, renewal_option: "month_to_month", renewal_term_months: null, notice_days: 30, notes: null });
   assert.equal(db.one<any>(`SELECT status FROM units WHERE id = ?`, [unit2]).status, "reserved");
   assert.throws(() => createAgreement(db, SYSTEM, { facility_id: fac, unit_id: unit2, renter_id: renter, term_type: "month_to_month", start_date: "2026-03-10", term_months: null, monthly_rate_cents: 8000, deposit_cents: 0, discount_cents: 0, discount_note: null, billing_mode: "anniversary", billing_day: 1, prorate_first: 1, renewal_option: "month_to_month", renewal_term_months: null, notice_days: 30, notes: null }), /already under an agreement/);

@@ -5,56 +5,10 @@ import { guard, facilityOf } from "../guard";
 import { audit } from "../audit";
 import { today } from "../clock";
 import { act, Form, UserError, type ActionState } from "../validate";
-import { createTicket, TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_STATUSES, updateTicket, type TicketInput } from "../maintenance";
 import { assignUnit, createReservation, setReservationStatus } from "../reservations";
 import { deleteDocument, DOC_CATEGORIES, storeDocument } from "../files";
 import { UNIT_SIZES, UNIT_TYPES } from "../units";
 import { can } from "../roles";
-
-export async function saveTicketAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("maintenance.edit");
-    const f = new Form(form);
-    const ticketId = f.str("id");
-    const unitId = f.str("unit_id");
-    const unit = unitId ? ctx.db.one<{ facility_id: string }>(`SELECT facility_id FROM units WHERE id = ?`, [unitId]) : null;
-    if (unitId && !unit) throw new UserError("Unit not found.");
-    const input: TicketInput = {
-      facility_id: unit?.facility_id ?? facilityOf(ctx, form),
-      unit_id: unitId,
-      title: f.req("title", { max: 160 }),
-      description: f.text("description", { max: 4000 }),
-      category: f.oneOf("category", TICKET_CATEGORIES.map((c) => c.value), { fallback: "general" }),
-      priority: f.oneOf("priority", TICKET_PRIORITIES.map((c) => c.value), { fallback: "normal" }),
-      status: f.oneOf("status", TICKET_STATUSES.map((c) => c.value), { fallback: "open" }),
-      assigned_to: f.str("assigned_to"),
-      unit_unavailable: f.bool("unit_unavailable") && unitId ? 1 : 0,
-      due_date: f.date("due_date"),
-      resolution: f.text("resolution", { max: 2000 }),
-    };
-    f.check();
-    if (input.assigned_to && !ctx.db.one(`SELECT 1 FROM users WHERE id = ? AND role <> 'renter'`, [input.assigned_to])) throw new UserError("Choose a staff member.");
-    if (ticketId) {
-      updateTicket(ctx.db, ctx.actor, ticketId, input);
-      return { ok: "Ticket saved." };
-    }
-    const newId = createTicket(ctx.db, ctx.actor, input);
-    redirect(`/maintenance/${newId}`);
-  });
-}
-
-export async function ticketStatusAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("maintenance.edit");
-    const ticketId = String(form.get("id") ?? "");
-    const status = String(form.get("status") ?? "");
-    const t = ctx.db.one<Record<string, any>>(`SELECT * FROM maintenance_tickets WHERE id = ?`, [ticketId]);
-    if (!t) throw new UserError("Ticket not found.");
-    if (!TICKET_STATUSES.some((s) => s.value === status)) throw new UserError("Choose a valid status.");
-    updateTicket(ctx.db, ctx.actor, ticketId, { ...(t as TicketInput), status });
-    return { ok: "Saved." };
-  });
-}
 
 export async function saveReservationAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
@@ -100,12 +54,10 @@ export async function reservationAction(_prev: ActionState, form: FormData): Pro
   });
 }
 
-const DOC_ENTITIES: Record<string, { table: string; cap: "renters.edit" | "agreements.edit" | "units.edit" | "maintenance.edit" | "finance.edit" }> = {
+const DOC_ENTITIES: Record<string, { table: string; cap: "renters.edit" | "agreements.edit" | "units.edit" }> = {
   renter: { table: "renters", cap: "renters.edit" },
   agreement: { table: "agreements", cap: "agreements.edit" },
   unit: { table: "units", cap: "units.edit" },
-  maintenance: { table: "maintenance_tickets", cap: "maintenance.edit" },
-  expense: { table: "expenses", cap: "finance.edit" },
 };
 
 export async function uploadDocumentAction(_prev: ActionState, form: FormData): Promise<ActionState> {

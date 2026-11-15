@@ -22,16 +22,10 @@ export type RenterInput = {
   company: string | null;
   email: string | null;
   phone: string | null;
-  phone_alt: string | null;
   id_type: string | null;
   /** undefined = leave as is, "" = clear, otherwise replace */
   id_number?: string;
   address: string | null;
-  city: string | null;
-  country: string | null;
-  emergency_name: string | null;
-  emergency_phone: string | null;
-  emergency_relation: string | null;
   status?: "lead" | "active" | "former";
   notes: string | null;
 };
@@ -42,15 +36,13 @@ export function createRenter(db: DB, input: RenterInput): string {
   const stamp = nowIso();
   const idNumber = input.id_number?.trim();
   db.run(
-    `INSERT INTO renters (id, renter_no, kind, first_name, last_name, company, email, phone, phone_alt, id_type,
-                          id_number_enc, id_last4, address, city, country, emergency_name, emergency_phone,
-                          emergency_relation, status, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO renters (id, renter_no, kind, first_name, last_name, company, email, phone, id_type,
+                          id_number_enc, id_last4, address, status, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       renterId, no, input.kind, input.first_name, input.last_name, input.company, input.email, input.phone,
-      input.phone_alt, input.id_type, idNumber ? encrypt(idNumber) : null, idNumber ? idNumber.slice(-4) : null,
-      input.address, input.city, input.country, input.emergency_name, input.emergency_phone,
-      input.emergency_relation, input.status ?? "lead", input.notes, stamp, stamp,
+      input.id_type, idNumber ? encrypt(idNumber) : null, idNumber ? idNumber.slice(-4) : null,
+      input.address, input.status ?? "lead", input.notes, stamp, stamp,
     ],
   );
   return renterId;
@@ -58,14 +50,12 @@ export function createRenter(db: DB, input: RenterInput): string {
 
 export function updateRenter(db: DB, renterId: string, input: RenterInput): void {
   db.run(
-    `UPDATE renters SET kind = ?, first_name = ?, last_name = ?, company = ?, email = ?, phone = ?, phone_alt = ?,
-            id_type = ?, address = ?, city = ?, country = ?, emergency_name = ?, emergency_phone = ?,
-            emergency_relation = ?, notes = ?, updated_at = ?
+    `UPDATE renters SET kind = ?, first_name = ?, last_name = ?, company = ?, email = ?, phone = ?,
+            id_type = ?, address = ?, notes = ?, updated_at = ?
       WHERE id = ?`,
     [
-      input.kind, input.first_name, input.last_name, input.company, input.email, input.phone, input.phone_alt,
-      input.id_type, input.address, input.city, input.country, input.emergency_name, input.emergency_phone,
-      input.emergency_relation, input.notes, nowIso(), renterId,
+      input.kind, input.first_name, input.last_name, input.company, input.email, input.phone,
+      input.id_type, input.address, input.notes, nowIso(), renterId,
     ],
   );
   if (input.id_number !== undefined) {

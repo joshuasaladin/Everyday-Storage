@@ -3,8 +3,8 @@ export type StaffRole = "owner" | "admin" | "manager" | "staff";
 export type Role = StaffRole | "renter";
 
 export const ROLES: { value: StaffRole; label: string; blurb: string }[] = [
-  { value: "staff", label: "Staff", blurb: "Units, facility map, renters, reservations and maintenance. No financial data." },
-  { value: "manager", label: "Manager", blurb: "Everything staff sees, plus agreements, invoices, payments, expenses and reports." },
+  { value: "staff", label: "Staff", blurb: "Units, facility map, renters and reservations. No financial data." },
+  { value: "manager", label: "Manager", blurb: "Everything staff sees, plus agreements, invoices, payments and reports." },
   { value: "admin", label: "Admin", blurb: "Everything, including refunds, settings, automations, users and the audit log." },
   { value: "owner", label: "Owner", blurb: "Full access. Cannot be demoted or disabled by an admin." },
 ];
@@ -24,8 +24,6 @@ export const CAPS = {
   "renters.sensitive": "manager", // ID numbers
   "reservations.view": "staff",
   "reservations.edit": "staff",
-  "maintenance.view": "staff",
-  "maintenance.edit": "staff",
   "agreements.view": "manager",
   "agreements.edit": "manager",
   "finance.view": "manager",

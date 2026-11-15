@@ -5,13 +5,13 @@ import { exportUrl, Pager, SortTh, Toolbar } from "@/components/table";
 import { requireStaff, scope } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { label, UNIT_SIZES, UNIT_STATUSES, UNIT_TYPES } from "@/lib/units";
-import { area, dims, formatDate, money, renterName } from "@/lib/format";
+import { area, dims, money, renterName } from "@/lib/format";
 import { like, listParams, param, type Query } from "@/lib/query";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Storage units" };
 
-const SORT = { unit: "u.unit_number", type: "u.type", area: "u.width_ft * u.depth_ft", price: "u.monthly_price_cents", status: "u.status", location: "u.location" };
+const SORT = { unit: "u.unit_number", type: "u.type", area: "u.width_m * u.depth_m", price: "u.monthly_price_cents", status: "u.status", location: "u.location" };
 
 export default async function UnitsPage({ searchParams }: { searchParams: Promise<Query> }) {
   const ctx = await requireStaff("units.view");
@@ -50,7 +50,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
       <PageHeader
         eyebrow="Rentals"
         title="Storage units"
-        blurb="Every unit, its size, price and who is in it. Status follows agreements, reservations and maintenance automatically."
+        blurb="Every unit, its size, price and who is in it. Status follows agreements and reservations automatically."
         actions={
           <>
             <Link href="/map" className="btn"><Icon name="map" />Map</Link>
@@ -83,7 +83,6 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
                   <SortTh col="price" label="Price / mo" base="/units" query={query} list={list} right />
                   <SortTh col="status" label="Status" base="/units" query={query} list={list} />
                   <th>Renter</th>
-                  <th>Available from</th>
                 </tr>
               </thead>
               <tbody>
@@ -94,15 +93,11 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
                       {multi && <div className="text-xs font-normal" style={{ color: "var(--ink-3)" }}>{u.facility_name}</div>}
                     </td>
                     <td>{label(UNIT_TYPES, u.type)}</td>
-                    <td className="whitespace-nowrap">{dims(u)}<span className="text-xs" style={{ color: "var(--ink-3)" }}> · {area(u)} sq ft</span></td>
+                    <td className="whitespace-nowrap">{dims(u)}<span className="text-xs" style={{ color: "var(--ink-3)" }}> · {area(u)} m²</span></td>
                     <td>{u.location ?? "—"}</td>
                     <td className="r num">{money(u.monthly_price_cents, cur)}</td>
                     <td><StatusChip list={UNIT_STATUSES} value={u.status} /></td>
                     <td>{u.renter_id ? <Link className="link" href={`/renters/${u.renter_id}`}>{renterName(u)}</Link> : "—"}</td>
-                    <td className="whitespace-nowrap">
-                      {u.status === "available" ? (u.available_from && u.available_from > new Date().toISOString().slice(0, 10) ? formatDate(u.available_from) : "Now")
-                        : u.move_out_date ? formatDate(u.move_out_date) : u.status === "occupied" && u.end_date ? <span style={{ color: "var(--ink-3)" }}>term to {formatDate(u.end_date)}</span> : "—"}
-                    </td>
                   </tr>
                 ))}
               </tbody>

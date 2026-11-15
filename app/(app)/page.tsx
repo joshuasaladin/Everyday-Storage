@@ -61,7 +61,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <StatCard label="Occupancy" value={percent(d.occupancy)} sub={`${d.occupied} of ${d.total} units`} tone="good" icon="chart" href="/units?status=occupied" />
         <StatCard label="Available" value={d.available} sub="ready to rent" tone="good" icon="door" href="/units?status=available" />
         <StatCard label="Reserved" value={d.reserved} sub={`${d.holds} ${d.holds === 1 ? "hold" : "holds"} · ${d.waitlist} on waitlist`} tone="warn" icon="bookmark" href="/reservations" />
-        <StatCard label="Total units" value={d.total} sub={d.maintenance + d.unavailable ? `${d.maintenance + d.unavailable} out of service` : "all in service"} tone="neutral" icon="building" href="/units" />
+        <StatCard label="Total units" value={d.total} sub={d.unavailable ? `${d.unavailable} offline` : "all in service"} tone="neutral" icon="building" href="/units" />
       </div>
 
       {money$ && (
@@ -91,7 +91,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               { label: "Occupied", value: d.occupied, color: "var(--info-fg)" },
               { label: "Available", value: d.available, color: "var(--good-fg)" },
               { label: "Reserved", value: d.reserved, color: "var(--warn-fg)" },
-              { label: "Maintenance", value: d.maintenance, color: "var(--bad-fg)" },
               { label: "Unavailable", value: d.unavailable, color: "var(--muted-fg)" },
             ]}
           />
@@ -159,7 +158,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {[
               d.pendingSignatures > 0 && { href: "/agreements?status=pending_signature", icon: "pen", text: `${d.pendingSignatures} agreement${d.pendingSignatures === 1 ? "" : "s"} awaiting signature`, show: can(ctx.user.role, "agreements.view") },
               d.moveOuts.length > 0 && { href: "/agreements?status=moving_out", icon: "logout", text: `${d.moveOuts.length} move-out${d.moveOuts.length === 1 ? "" : "s"} in progress — next ${formatDate(d.moveOuts[0].move_out_date)}`, show: can(ctx.user.role, "agreements.view") },
-              d.openTickets > 0 && { href: "/maintenance", icon: "wrench", text: `${d.openTickets} open maintenance ticket${d.openTickets === 1 ? "" : "s"}${d.maintenance ? ` · ${d.maintenance} unit${d.maintenance === 1 ? "" : "s"} blocked` : ""}`, show: true },
               d.holds > 0 && { href: "/reservations", icon: "bookmark", text: `${d.holds} reservation hold${d.holds === 1 ? "" : "s"} to convert into agreements`, show: true },
               d.waitlist > 0 && { href: "/reservations?status=waitlist", icon: "clock", text: `${d.waitlist} ${d.waitlist === 1 ? "person" : "people"} on the waitlist`, show: true },
             ].filter((x): x is { href: string; icon: string; text: string; show: boolean } => Boolean(x && x.show)).map((item, i) => (
@@ -172,7 +170,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </li>
             ))}
           </ul>
-          {d.pendingSignatures + d.moveOuts.length + d.openTickets + d.holds + d.waitlist === 0 && <EmptyState title="All clear" hint="No signatures, move-outs, tickets or holds waiting." />}
+          {d.pendingSignatures + d.moveOuts.length + d.holds + d.waitlist === 0 && <EmptyState title="All clear" hint="No signatures, move-outs or holds waiting." />}
         </Card>
 
         {activity.length > 0 && (

@@ -5,7 +5,7 @@ import { can, type Cap } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
-const VIEW: Record<string, Cap> = { renter: "renters.view", agreement: "agreements.view", unit: "units.view", maintenance: "maintenance.view", expense: "finance.view" };
+const VIEW: Record<string, Cap> = { renter: "renters.view", agreement: "agreements.view", unit: "units.view" };
 const INLINE = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
 
 /** The only way a stored document leaves the server. Checks the session and the record on every request. */

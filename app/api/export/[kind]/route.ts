@@ -46,8 +46,8 @@ const EXPORTS: Record<string, Exporter> = {
         [...f.params, ...s.params],
       );
       return {
-        columns: ["Facility", "Unit", "Type", "Size", "Width ft", "Depth ft", "Height ft", "Area sq ft", "Location", "Monthly price", "Status", "Renter", "Agreement", "Available from", "Features"],
-        rows: rows.map((u) => [u.facility, u.unit_number, u.type, u.size_label, u.width_ft, u.depth_ft, u.height_ft, area(u), u.location, csv$(u.monthly_price_cents), u.status, u.agreement_no ? renterName(u) : "", u.agreement_no, u.available_from, u.features]),
+        columns: ["Facility", "Unit", "Type", "Size", "Width m", "Depth m", "Height m", "Area m2", "Location", "Monthly price", "Status", "Renter", "Agreement", "Features"],
+        rows: rows.map((u) => [u.facility, u.unit_number, u.type, u.size_label, u.width_m, u.depth_m, u.height_m, area(u), u.location, csv$(u.monthly_price_cents), u.status, u.agreement_no ? renterName(u) : "", u.agreement_no, u.features]),
       };
     },
   },
@@ -64,8 +64,8 @@ const EXPORTS: Record<string, Exporter> = {
       );
       // the ID number is never exported
       return {
-        columns: ["Renter no", "Type", "Name", "Contact", "Email", "Phone", "Address", "City", "Country", "Emergency contact", "Emergency phone", "Status", "Units", ...(finance ? ["Balance owed"] : [])],
-        rows: rows.map((r) => [r.renter_no, r.kind, renterName(r), `${r.first_name} ${r.last_name}`.trim(), r.email, r.phone, r.address, r.city, r.country, r.emergency_name, r.emergency_phone, r.status, r.units, ...(finance ? [csv$(r.balance)] : [])]),
+        columns: ["Renter no", "Type", "Name", "Contact", "Email", "Phone", "Address", "Status", "Units", ...(finance ? ["Balance owed"] : [])],
+        rows: rows.map((r) => [r.renter_no, r.kind, renterName(r), `${r.first_name} ${r.last_name}`.trim(), r.email, r.phone, r.address, r.status, r.units, ...(finance ? [csv$(r.balance)] : [])]),
       };
     },
   },
@@ -143,29 +143,6 @@ const EXPORTS: Record<string, Exporter> = {
         columns: ["Date", "Agreement", "Unit", "Renter", "Type", "Amount", "Method", "Reference", "Notes"],
         rows: rows.map((d) => [d.txn_date, d.agreement_no, d.unit_number, renterName(d), d.type, csv$(d.type === "collected" ? d.amount_cents : -d.amount_cents), d.method, d.reference, d.notes]),
       };
-    },
-  },
-  expenses: {
-    cap: "finance.view",
-    run(ctx, q) {
-      const f = filters(q, { eq: { category: "e.category" }, search: ["e.description", "e.vendor", "e.reference"], from: "e.expense_date", to: "e.expense_date" });
-      const s = scope(ctx, "e.facility_id");
-      const rows = ctx.db.all<Record<string, any>>(`SELECT e.*, f.name AS facility FROM expenses e JOIN facilities f ON f.id = e.facility_id WHERE ${f.where.join(" AND ")}${s.sql} ORDER BY e.expense_date`, [...f.params, ...s.params]);
-      return { columns: ["Date", "Facility", "Category", "Vendor", "Description", "Amount", "Method", "Reference"], rows: rows.map((e) => [e.expense_date, e.facility, e.category, e.vendor, e.description, csv$(e.amount_cents), e.method, e.reference]) };
-    },
-  },
-  maintenance: {
-    cap: "maintenance.view",
-    run(ctx, q) {
-      const f = filters(q, { eq: { status: "m.status", priority: "m.priority", category: "m.category" }, search: ["m.title", "m.ticket_no", "u.unit_number"] });
-      const s = scope(ctx, "m.facility_id");
-      const rows = ctx.db.all<Record<string, any>>(
-        `SELECT m.*, u.unit_number, f.name AS facility, us.name AS assignee, (SELECT COALESCE(SUM(amount_cents), 0) FROM expenses e WHERE e.maintenance_id = m.id) AS cost
-           FROM maintenance_tickets m JOIN facilities f ON f.id = m.facility_id LEFT JOIN units u ON u.id = m.unit_id LEFT JOIN users us ON us.id = m.assigned_to
-          WHERE ${f.where.join(" AND ")}${s.sql} ORDER BY m.created_at`,
-        [...f.params, ...s.params],
-      );
-      return { columns: ["Ticket", "Facility", "Unit", "Title", "Category", "Priority", "Status", "Assigned to", "Blocks unit", "Due", "Opened", "Completed", "Cost"], rows: rows.map((m) => [m.ticket_no, m.facility, m.unit_number, m.title, m.category, m.priority, m.status, m.assignee, m.unit_unavailable ? "yes" : "no", m.due_date, m.created_at.slice(0, 10), m.completed_at?.slice(0, 10), can(ctx.user.role, "finance.view") ? csv$(m.cost) : ""]) };
     },
   },
   reservations: {

@@ -22,7 +22,7 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const { db } = ctx;
   const a = db.one<Record<string, any>>(
-    `SELECT a.*, u.unit_number, u.width_ft, u.depth_ft, u.height_ft, f.name AS facility_name FROM agreements a
+    `SELECT a.*, u.unit_number, u.width_m, u.depth_m, u.height_m, f.name AS facility_name FROM agreements a
        JOIN units u ON u.id = a.unit_id JOIN facilities f ON f.id = a.facility_id WHERE a.id = ?`,
     [id],
   );

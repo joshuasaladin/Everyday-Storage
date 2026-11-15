@@ -9,7 +9,6 @@ import { createAgreement, endAgreement, scheduleMoveOut } from "./agreements";
 import { applyLateFees, generateDueInvoices } from "./billing";
 import { recordDeposit, recordPayment, reconcilePayments, depositHeld } from "./payments";
 import { createReservation } from "./reservations";
-import { createExpense, createTicket } from "./maintenance";
 
 /**
  * The demo workspace: a believable 14 months of a storage business, built by
@@ -92,27 +91,29 @@ export function seedDemo(db: DB): void {
     const place = (unitId: string, x: number, y: number, w: number, h: number) =>
       db.run(`UPDATE units SET map_x = ?, map_y = ?, map_w = ?, map_h = ? WHERE id = ?`, [x, y, w, h, unitId]);
     const unit = (
-      fid: string, num: string, type: string, size: string, w: number, d: number, price: number, loc: string,
+      fid: string, num: string, type: string, size: string, [w, d, h]: [number, number, number], price: number, loc: string,
       cell: [number, number, number, number], features: string | null = null,
     ) => {
       const uid = createUnit(db, {
-        facility_id: fid, unit_number: num, type, size_label: size, width_ft: w, depth_ft: d, height_ft: 8,
-        location: loc, monthly_price_cents: price, offline: 0, available_from: null, features, notes: null,
+        facility_id: fid, unit_number: num, type, size_label: size, width_m: w, depth_m: d, height_m: h,
+        location: loc, monthly_price_cents: price, offline: 0, features, notes: null,
       });
       place(uid, ...cell);
       return uid;
     };
     const units: { id: string; fid: string; price: number; num: string }[] = [];
-    const add = (...args: Parameters<typeof unit>) => units.push({ id: unit(...args), fid: args[0], price: args[6], num: args[1] });
+    const add = (...args: Parameters<typeof unit>) => units.push({ id: unit(...args), fid: args[0], price: args[5], num: args[1] });
     const n2 = (n: number) => String(n).padStart(2, "0");
 
-    for (let i = 0; i < 16; i++) add(ora, `A${n2(i + 1)}`, "locker", "small", 5, 5, 6500, "Building A · ground floor", [i, 0, 1, 1]);
-    for (let i = 0; i < 8; i++) add(ora, `B${n2(i + 1)}`, i < 4 ? "climate" : "standard", "medium", 5, 10, i < 4 ? 13500 : 11000, "Building B · north side", [i * 2, 2, 2, 1], i < 4 ? "Climate controlled, 24/7 access" : null);
-    for (let i = 0; i < 8; i++) add(ora, `B${n2(i + 9)}`, "standard", "medium", 5, 10, 11000, "Building B · south side", [i * 2, 3, 2, 1]);
-    for (let i = 0; i < 8; i++) add(ora, `C${n2(i + 1)}`, i % 4 === 0 ? "climate" : "standard", "large", 10, 10, i % 4 === 0 ? 21500 : 18500, "Building C", [i * 2, 5, 2, 2]);
-    for (let i = 0; i < 4; i++) add(ora, `D${n2(i + 1)}`, "drive_up", "xl", 10, 20, 32000, "Row D · drive-up", [i * 4, 8, 4, 2], "Roll-up door, vehicle access");
-    for (let i = 0; i < 6; i++) add(nrd, `N${n2(i + 1)}`, "container", "xl", 8, 20, 24000, "Yard · front row", [i * 2, 0, 2, 2], "20 ft container, ground level");
-    for (let i = 0; i < 6; i++) add(nrd, `N${n2(i + 7)}`, i < 4 ? "container" : "parking", i < 4 ? "xl" : "large", i < 4 ? 8 : 10, i < 4 ? 20 : 25, i < 4 ? 24000 : 12000, "Yard · back row", [i * 2, 3, 2, 2]);
+    const SMALL: [number, number, number] = [1.5, 3, 2.4];
+    const STANDARD: [number, number, number] = [3, 3, 2.4];
+    for (let i = 0; i < 16; i++) add(ora, `A${n2(i + 1)}`, "storage_unit", "small", SMALL, 6500, "Building A · ground floor", [i, 0, 1, 1]);
+    for (let i = 0; i < 8; i++) add(ora, `B${n2(i + 1)}`, "storage_unit", "standard", STANDARD, i < 4 ? 13500 : 11000, "Building B · north side", [i * 2, 2, 2, 1], i < 4 ? "Climate controlled, 24/7 access" : null);
+    for (let i = 0; i < 8; i++) add(ora, `B${n2(i + 9)}`, "storage_unit", "standard", STANDARD, 11000, "Building B · south side", [i * 2, 3, 2, 1]);
+    for (let i = 0; i < 8; i++) add(ora, `C${n2(i + 1)}`, "warehouse", "large", [6, 6, 3.5], i % 4 === 0 ? 21500 : 18500, "Building C", [i * 2, 5, 2, 2], i % 4 === 0 ? "Climate controlled" : null);
+    for (let i = 0; i < 4; i++) add(ora, `D${n2(i + 1)}`, "warehouse", "large", [6, 12, 4.5], 32000, "Row D · drive-up", [i * 4, 8, 4, 2], "Roll-up door, vehicle access");
+    for (let i = 0; i < 6; i++) add(nrd, `N${n2(i + 1)}`, "warehouse", "large", [6, 10, 4], 24000, "Yard · front row", [i * 2, 0, 2, 2], "Ground level, roll-up door");
+    for (let i = 0; i < 6; i++) add(nrd, `N${n2(i + 7)}`, "warehouse", "large", i < 4 ? [6, 10, 4] : [5, 8, 3.5], i < 4 ? 24000 : 12000, "Yard · back row", [i * 2, 3, 2, 2]);
 
     // ---- renters
     const renters = PEOPLE.map(([first, last, company], i) => {
@@ -125,13 +126,9 @@ export function seedDemo(db: DB): void {
         kind: business ? "business" : "individual",
         first_name: fn, last_name: ln, company: company ?? null, email,
         phone: `+297 5${60 + (i % 30)} ${String(1000 + Math.floor(rand() * 8999))}`,
-        phone_alt: null, id_type: business ? "kvk" : "aruba_id",
+        id_type: business ? "kvk" : "aruba_id",
         id_number: business ? `H${10000 + i * 37}` : `${String(70 + (i % 29))}0${String(100000 + Math.floor(rand() * 899999))}`,
-        address: `${pick(STREETS)} ${1 + Math.floor(rand() * 140)}`, city: pick(["Oranjestad", "Noord", "Santa Cruz", "Savaneta", "San Nicolas", "Paradera"]),
-        country: "Aruba",
-        emergency_name: business ? null : `${pick(PEOPLE.slice(0, 25))[0]} ${ln}`,
-        emergency_phone: business ? null : `+297 59${Math.floor(rand() * 9)} ${String(1000 + Math.floor(rand() * 8999))}`,
-        emergency_relation: business ? null : pick(["Spouse", "Parent", "Sibling", "Friend", "Partner"]),
+        address: `${pick(STREETS)} ${1 + Math.floor(rand() * 140)}, ${pick(["Oranjestad", "Noord", "Santa Cruz", "Savaneta", "San Nicolas", "Paradera"])}`,
         status: "lead", notes: i === 3 ? "Prefers WhatsApp. Pays in florins at the office." : null,
       });
     });
@@ -248,42 +245,12 @@ export function seedDemo(db: DB): void {
     void pending;
 
     // ---- reservations and the waitlist
-    createReservation(db, actor, { facility_id: ora, unit_id: units[15].id, name: "Sheila Dirksz", email: "sheila.dirksz@example.com", phone: "+297 594 2210", desired_size: "small", desired_type: "locker", desired_start: addDays(T, 5), source: "staff", notes: "Wants a ground-floor locker.", status: "confirmed" });
-    createReservation(db, actor, { facility_id: ora, unit_id: units[27].id, name: "Luis Quant", email: "luis.quant@example.com", phone: "+297 560 8841", desired_size: "medium", desired_type: "standard", desired_start: addDays(T, 9), source: "web", notes: null });
-    createReservation(db, actor, { facility_id: ora, unit_id: null, name: "Fabiola Maduro", email: "fabiola@example.com", phone: "+297 593 0077", desired_size: "xl", desired_type: "drive_up", desired_start: addDays(T, 20), source: "web", notes: "Needs drive-up access for a boat trailer." });
-    createReservation(db, actor, { facility_id: ora, unit_id: null, name: "Gilbert Stamper", email: "g.stamper@example.com", phone: "+297 562 4419", desired_size: "large", desired_type: "climate", desired_start: addDays(T, 30), source: "staff", notes: "Climate controlled only — storing artwork." });
-    createReservation(db, actor, { facility_id: nrd, unit_id: null, name: "Nord Construction N.V.", email: "office@nordconstruction.example.com", phone: "+297 586 1200", desired_size: "xl", desired_type: "container", desired_start: addDays(T, 14), source: "staff", notes: "Two containers if possible." });
-
-    // ---- maintenance, with one ticket that takes a unit off the market
-    const t1 = createTicket(db, actor, { facility_id: ora, unit_id: units[39].id, title: "Roof leak above C08", description: "Water stain on the back wall after last week's rain. Unit must stay empty until the roof panel is resealed.", category: "leak", priority: "high", status: "in_progress", assigned_to: staffId, unit_unavailable: 1, due_date: addDays(T, 3) });
-    createTicket(db, actor, { facility_id: ora, unit_id: units[31].id, title: "Roll-up door sticking on B16", description: "Door needs lubricating and the spring checked.", category: "door", priority: "normal", status: "open", assigned_to: staffId, unit_unavailable: 0, due_date: addDays(T, 7) });
-    createTicket(db, actor, { facility_id: ora, unit_id: null, title: "Gate keypad intermittently unresponsive", description: "Keypad at the main gate needs two or three tries in the evening.", category: "security", priority: "urgent", status: "waiting", assigned_to: null, unit_unavailable: 0, due_date: addDays(T, -1) });
-    createTicket(db, actor, { facility_id: nrd, unit_id: units[49].id, title: "Repaint container N06", description: "Surface rust on the door side.", category: "general", priority: "low", status: "open", assigned_to: null, unit_unavailable: 0, due_date: addDays(T, 21) });
-    const t5 = createTicket(db, actor, { facility_id: ora, unit_id: null, title: "Quarterly pest control", description: "Routine treatment, all buildings.", category: "pest", priority: "normal", status: "done", assigned_to: staffId, unit_unavailable: 0, due_date: addDays(T, -20) });
-    db.run(`UPDATE maintenance_tickets SET completed_at = ?, resolution = 'Treated all buildings; next visit in three months.' WHERE id = ?`, [`${addDays(T, -19)}T15:00:00.000Z`, t5]);
-
-    // ---- expenses: the steady monthly costs, plus the odd repair
-    const monthly: [string, string, string, number, string][] = [
-      ["utilities", "N.V. Elmar", "Electricity", 42000, "ora"], ["utilities", "WEB Aruba N.V.", "Water", 9500, "ora"],
-      ["utilities", "Setar N.V.", "Internet & gate line", 12900, "ora"], ["insurance", "Nagico Insurances", "Property insurance", 30000, "ora"],
-      ["security", "Aruba Alarm Systems", "Alarm monitoring & cameras", 27500, "ora"], ["payroll", "Payroll", "Site staff wages", 120000, "ora"],
-      ["software", "Storage HQ & bank fees", "Software and banking fees", 8900, "ora"], ["rent_lease", "Land Aruba", "Land lease — Noord yard", 45000, "nrd"],
-      ["utilities", "N.V. Elmar", "Electricity — Noord yard", 14500, "nrd"],
-    ];
-    for (let m = 14; m >= 0; m--) {
-      const month = addMonths(T, -m).slice(0, 7);
-      monthly.forEach(([category, vendor, description, base, fac], i) => {
-        const date = `${month}-${n2(3 + ((i * 3) % 22))}`;
-        if (date > T) return;
-        const wobble = category === "utilities" ? 0.85 + rand() * 0.3 : 1;
-        createExpense(db, actor, { facility_id: fac === "ora" ? ora : nrd, expense_date: date, category, vendor, description, amount_cents: Math.round((base * wobble) / 100) * 100, method: "bank_transfer", reference: null, maintenance_id: null, unit_id: null });
-      });
-      if (m % 3 === 1) createExpense(db, actor, { facility_id: ora, expense_date: `${month}-18`, category: "marketing", vendor: "Diario / social ads", description: "Local advertising", amount_cents: 35000 + Math.floor(rand() * 20) * 1000, method: "card", reference: null, maintenance_id: null, unit_id: null });
-    }
-    createExpense(db, actor, { facility_id: ora, expense_date: addDays(T, -19), category: "maintenance", vendor: "Pest Away Aruba", description: "Quarterly pest control", amount_cents: 22000, method: "bank_transfer", reference: null, maintenance_id: t5, unit_id: null });
-    createExpense(db, actor, { facility_id: ora, expense_date: addDays(T, -2), category: "maintenance", vendor: "Roofing Solutions Aruba", description: "Roof panel sealant and labour (deposit)", amount_cents: 38500, method: "bank_transfer", reference: null, maintenance_id: t1, unit_id: units[39].id });
+    createReservation(db, actor, { facility_id: ora, unit_id: units[15].id, name: "Sheila Dirksz", email: "sheila.dirksz@example.com", phone: "+297 594 2210", desired_size: "small", desired_type: "storage_unit", desired_start: addDays(T, 5), source: "staff", notes: "Wants a ground-floor locker.", status: "confirmed" });
+    createReservation(db, actor, { facility_id: ora, unit_id: units[27].id, name: "Luis Quant", email: "luis.quant@example.com", phone: "+297 560 8841", desired_size: "standard", desired_type: "storage_unit", desired_start: addDays(T, 9), source: "web", notes: null });
+    createReservation(db, actor, { facility_id: ora, unit_id: null, name: "Fabiola Maduro", email: "fabiola@example.com", phone: "+297 593 0077", desired_size: "large", desired_type: "warehouse", desired_start: addDays(T, 20), source: "web", notes: "Needs drive-up access for a boat trailer." });
+    createReservation(db, actor, { facility_id: ora, unit_id: null, name: "Gilbert Stamper", email: "g.stamper@example.com", phone: "+297 562 4419", desired_size: "large", desired_type: "warehouse", desired_start: addDays(T, 30), source: "staff", notes: "Climate controlled only — storing artwork." });
+    createReservation(db, actor, { facility_id: nrd, unit_id: null, name: "Nord Construction N.V.", email: "office@nordconstruction.example.com", phone: "+297 586 1200", desired_size: "large", desired_type: "warehouse", desired_start: addDays(T, 14), source: "staff", notes: "Two containers if possible." });
 
     syncAllUnits(db);
-    db.run(`DELETE FROM audit_log WHERE actor_name = 'Demo seed' AND action = 'create' AND entity = 'expense'`);
   });
 }

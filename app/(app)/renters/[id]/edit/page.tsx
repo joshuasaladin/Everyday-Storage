@@ -11,8 +11,7 @@ export default async function EditRenterPage({ params }: { params: Promise<{ id:
   const ctx = await requireStaff("renters.edit");
   const { id } = await params;
   const renter = ctx.db.one<Record<string, any>>(
-    `SELECT id, kind, first_name, last_name, company, email, phone, phone_alt, id_type, id_last4, address, city, country,
-            emergency_name, emergency_phone, emergency_relation, notes FROM renters WHERE id = ?`,
+    `SELECT id, kind, first_name, last_name, company, email, phone, id_type, id_last4, address, notes FROM renters WHERE id = ?`,
     [id],
   );
   if (!renter) notFound();

@@ -2,8 +2,8 @@
 
 The all-in-one management platform for Everyday Storage Aruba: units, a live
 facility map, renters, rental agreements with e-signature, automatic monthly
-invoicing, payments and deposits, financial reports, automations, maintenance,
-reservations and a customer portal.
+invoicing, payments and deposits, financial reports, automations, reservations
+and a customer portal.
 
 Built on the same stack and design system as Coralux HQ — Next.js (App Router,
 server actions), SQLite, Tailwind, role-based sessions, deployed to Render from
@@ -52,17 +52,15 @@ Demo logins (password `demo-storage`): `demo@…` (owner), `manager@…`,
 | Module | Where | Notes |
 |---|---|---|
 | Dashboard | `/` | Occupancy, MRR, outstanding, overdue, expiring agreements, charts |
-| Storage units | `/units` | Dimensions, type, price, location, rental history. Status is derived, never typed |
+| Storage units | `/units` | Storage unit or warehouse; Small (1.5 × 3 × 2.4 m), Standard (3 × 3 × 2.4 m) or Large (any size). All sizes in metres. Status is derived, never typed |
 | Facility map | `/map` | Colour-coded grid per facility; click a unit for details; "Arrange layout" to move/resize |
-| Renters | `/renters` | Contacts, emergency contact, encrypted ID number, documents, balances, several units each |
+| Renters | `/renters` | Contact details, encrypted ID number, documents, balances, several units each |
 | Agreements | `/agreements` | Fixed-term and month-to-month, deposit, renewal option, e-signature, elapsed/remaining, move-out workflow |
 | Invoices | `/invoices` | Automatic per billing cycle, proration, late fees, discounts, credits, PDF, email |
 | Payments | `/payments` | Part payments, allocation, refunds, reconciliation, duplicate guards, deposit ledger |
-| Expenses | `/expenses` | Feeds profit and cash flow |
-| Reports | `/reports` | Revenue, expenses, profit, cash flow, receivables aging, occupancy, forecast; CSV and PDF |
+| Reports | `/reports` | Revenue, collections, receivables aging, occupancy, forecast; CSV and PDF |
 | Automations | `/automations` | Rules, email outbox, job log, run-now |
-| Maintenance | `/maintenance` | Tickets, assignment, costs, photos, "blocks renting" |
-| Reservations | `/reservations`, public `/reserve` | Holds, waitlist, convert to agreement |
+| Reservations | `/reservations`, public `/reserve` | Holds, waitlist, convert to agreement; copy the full public booking link from the Reservations page |
 | Customer portal | `/portal` | A renter's units, agreements, invoices, receipts, renewal and move-out requests |
 | Settings | `/settings` | Business, USD/AWG, taxes, billing rules, invoice template, notifications, users, facilities, terms |
 | Audit log | `/audit` | Who did what, when; append-only |
@@ -85,17 +83,16 @@ Demo logins (password `demo-storage`): `demo@…` (owner), `manager@…`,
   applied to an unpaid invoice or forfeited.
 - **Revenue** = invoiced charges net of discounts and goodwill credits,
   excluding tax, in the month of the billing period. **Collected** = money
-  received, by date. **Profit** = revenue − expenses. **Operating cash flow**
-  = collected − refunds − expenses.
-- **Unit status is derived**: occupied › maintenance › unavailable › reserved ›
-  available, from agreements, tickets, the offline switch and holds.
+  received, by date, net of refunds.
+- **Unit status is derived**: occupied › unavailable › reserved › available,
+  from agreements, the offline switch and holds.
 
 ## Roles
 
 | Role | Can |
 |---|---|
-| Staff | Units, map, renters, reservations, maintenance. No financial data. |
-| Manager | + agreements, invoices, payments, expenses, reports, renter ID numbers |
+| Staff | Units, map, renters, reservations. No financial data. |
+| Manager | + agreements, invoices, payments, reports, renter ID numbers |
 | Admin | + refunds and deposit refunds, settings, automations, users, audit log |
 | Owner | Everything; cannot be demoted or disabled by an admin |
 | Renter | Only their own portal |
@@ -141,6 +138,10 @@ reminder, stage 7 days, invoice X" is sent at most once.
 4. Optional: `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` (or SMTP) for real email.
 
 **Back up** `/var/data/storage.db` and `/var/data/uploads/` regularly.
+
+**Upgrades** run themselves: on start, `lib/migrate.ts` brings an older
+database up to date (tracked by SQLite's `user_version`). The demo workspace is
+simply rebuilt.
 
 ## Before going live
 

@@ -15,7 +15,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     can(role, "finance.edit") && { href: "/payments?record=1", label: "Record a payment", icon: "card" },
     can(role, "finance.edit") && { href: "/invoices/new", label: "Invoice", icon: "receipt" },
     can(role, "reservations.edit") && { href: "/reservations?new=1", label: "Reservation", icon: "bookmark" },
-    can(role, "maintenance.edit") && { href: "/maintenance?new=1", label: "Maintenance ticket", icon: "wrench" },
     can(role, "units.edit") && { href: "/units/new", label: "Storage unit", icon: "door" },
   ].filter(Boolean) as { href: string; label: string; icon: string }[];
 

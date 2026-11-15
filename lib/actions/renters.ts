@@ -26,14 +26,8 @@ export async function saveRenterAction(_prev: ActionState, form: FormData): Prom
       company: f.str("company", { max: 160, required: kind === "business", label: "Company name" }),
       email: f.email("email"),
       phone: f.str("phone", { max: 40 }),
-      phone_alt: f.str("phone_alt", { max: 40 }),
       id_type: f.str("id_type") ? f.oneOf("id_type", ID_TYPES.map((t) => t.value), { label: "ID type" }) : null,
       address: f.str("address", { max: 200 }),
-      city: f.str("city", { max: 80 }),
-      country: f.str("country", { max: 80 }),
-      emergency_name: f.str("emergency_name", { max: 120 }),
-      emergency_phone: f.str("emergency_phone", { max: 40 }),
-      emergency_relation: f.str("emergency_relation", { max: 60 }),
       notes: f.text("notes", { max: 4000 }),
     };
     // ID numbers are only read from the form for roles allowed to see them

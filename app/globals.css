@@ -307,7 +307,6 @@ dialog::backdrop { background: var(--overlay); backdrop-filter: blur(2px); }
 .unit-available { background: var(--good-bg); color: var(--good-fg); border-color: color-mix(in srgb, var(--good-fg) 35%, transparent); }
 .unit-occupied { background: var(--info-bg); color: var(--info-fg); border-color: color-mix(in srgb, var(--info-fg) 30%, transparent); }
 .unit-reserved { background: var(--warn-bg); color: var(--warn-fg); border-color: color-mix(in srgb, var(--warn-fg) 35%, transparent); }
-.unit-maintenance { background: var(--bad-bg); color: var(--bad-fg); border-color: color-mix(in srgb, var(--bad-fg) 35%, transparent); }
 .unit-unavailable { background: var(--muted-bg); color: var(--muted-fg); border-color: var(--line-2);
   background-image: repeating-linear-gradient(45deg, transparent 0 5px, color-mix(in srgb, var(--muted-fg) 14%, transparent) 5px 6px); }
 .map-empty { border-radius: 6px; border: 1px dashed transparent; }

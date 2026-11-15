@@ -10,7 +10,6 @@ import { PAYMENT_METHODS, PaymentError, recordPayment, reconcilePayments, refund
 import { processOutbox, queueInvoiceEmail, queueReceiptEmail } from "../email";
 import { createPaymentRequest } from "../gateway";
 import { toBase } from "../settings";
-import { createExpense, EXPENSE_CATEGORIES } from "../maintenance";
 
 const LINE_KINDS = ["fee", "other", "discount"] as const;
 
@@ -237,48 +236,5 @@ export async function sendReceiptAction(_prev: ActionState, form: FormData): Pro
     if (!queueReceiptEmail(ctx.db, paymentId)) throw new UserError("This renter has no email address on file.");
     await processOutbox(ctx.db);
     return { ok: "Receipt emailed." };
-  });
-}
-
-export async function saveExpenseAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("finance.edit");
-    const f = new Form(form);
-    const expenseId = f.str("id");
-    const input = {
-      facility_id: facilityOf(ctx, form),
-      expense_date: f.date("expense_date", { required: true, label: "Date" }) ?? today(),
-      category: f.oneOf("category", EXPENSE_CATEGORIES.map((c) => c.value)),
-      vendor: f.str("vendor", { max: 120 }),
-      description: f.req("description", { max: 200 }),
-      amount_cents: f.cents("amount", { required: true, min: 1 }) ?? 0,
-      method: f.str("method", { max: 40 }),
-      reference: f.str("reference", { max: 80 }),
-      maintenance_id: f.str("maintenance_id"),
-      unit_id: f.str("unit_id"),
-    };
-    f.check();
-    if (expenseId) {
-      ctx.db.run(
-        `UPDATE expenses SET facility_id = ?, expense_date = ?, category = ?, vendor = ?, description = ?, amount_cents = ?, method = ?, reference = ?, updated_at = ? WHERE id = ?`,
-        [input.facility_id, input.expense_date, input.category, input.vendor, input.description, input.amount_cents, input.method, input.reference, nowIso(), expenseId],
-      );
-      audit(ctx.db, ctx.actor, "update", "expense", expenseId, `Updated expense — ${input.description}`);
-    } else {
-      createExpense(ctx.db, ctx.actor, input);
-    }
-    return { ok: "Expense saved." };
-  });
-}
-
-export async function deleteExpenseAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("finance.edit");
-    const expenseId = String(form.get("id") ?? "");
-    const e = ctx.db.one<Record<string, any>>(`SELECT * FROM expenses WHERE id = ?`, [expenseId]);
-    if (!e) throw new UserError("Expense not found.");
-    ctx.db.run(`DELETE FROM expenses WHERE id = ?`, [expenseId]);
-    audit(ctx.db, ctx.actor, "delete", "expense", expenseId, `Deleted expense ${(e.amount_cents / 100).toFixed(2)} — ${e.description}`);
-    return { ok: "Expense deleted." };
   });
 }

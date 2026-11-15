@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { appOrigin } from "../origin";
 import { redirect } from "next/navigation";
 import { guard } from "../guard";
 import { audit } from "../audit";
@@ -14,14 +15,6 @@ import { generateDueInvoices } from "../billing";
 import { recordDeposit } from "../payments";
 import { processOutbox, queueAgreementNotice, queueInvoiceEmail } from "../email";
 import { PAYMENT_METHODS } from "../payments";
-
-async function origin(): Promise<string> {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
 
 export async function createAgreementAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
@@ -87,7 +80,7 @@ export async function sendSignLinkAction(_prev: ActionState, form: FormData): Pr
     const ag = ctx.db.one<{ status: string }>(`SELECT status FROM agreements WHERE id = ?`, [agId]);
     if (!ag || ag.status !== "pending_signature") throw new UserError("This agreement is not awaiting a signature.");
     const token = issueSignLink(ctx.db, ctx.actor, agId);
-    const link = `${await origin()}/sign/${token}`;
+    const link = `${await appOrigin()}/sign/${token}`;
     const emailed = queueAgreementNotice(ctx.db, agId, "sign_request", token.slice(0, 8), { link });
     await processOutbox(ctx.db);
     return { ok: `${emailed ? "Emailed to the renter. " : "No email on file — share this link yourself. "}${link}` };

@@ -104,19 +104,18 @@ CREATE TABLE IF NOT EXISTS units (
   id            TEXT PRIMARY KEY,
   facility_id   TEXT NOT NULL REFERENCES facilities(id) ON DELETE RESTRICT,
   unit_number   TEXT NOT NULL,
-  type          TEXT NOT NULL DEFAULT 'standard',
-  size_label    TEXT NOT NULL DEFAULT 'medium',
-  width_ft      REAL NOT NULL DEFAULT 0,
-  depth_ft      REAL NOT NULL DEFAULT 0,
-  height_ft     REAL NOT NULL DEFAULT 0,
+  type          TEXT NOT NULL DEFAULT 'storage_unit',   -- storage_unit | warehouse
+  size_label    TEXT NOT NULL DEFAULT 'standard',       -- small | standard | large
+  width_m       REAL NOT NULL DEFAULT 0,                -- all dimensions in metres
+  depth_m       REAL NOT NULL DEFAULT 0,
+  height_m      REAL NOT NULL DEFAULT 0,
   location      TEXT,                        -- building / row / floor
   monthly_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (monthly_price_cents >= 0),
-  -- status is derived (see lib/units.ts syncUnitStatus) from agreements,
-  -- reservations and maintenance; offline is the one manual switch
+  -- status is derived (see lib/units.ts syncUnitStatus) from agreements and
+  -- reservations; offline is the one manual switch
   status        TEXT NOT NULL DEFAULT 'available'
                 CHECK (status IN ('available','occupied','reserved','maintenance','unavailable')),
   offline       INTEGER NOT NULL DEFAULT 0,
-  available_from TEXT,
   features      TEXT,
   notes         TEXT,
   map_x         INTEGER,
@@ -458,52 +457,11 @@ CREATE TABLE IF NOT EXISTS gateway_events (
   received_at   TEXT NOT NULL
 );
 
--- ----------------------------------------------------- expenses & maintenance
-
-CREATE TABLE IF NOT EXISTS maintenance_tickets (
-  id            TEXT PRIMARY KEY,
-  ticket_no     TEXT NOT NULL UNIQUE,
-  facility_id   TEXT NOT NULL REFERENCES facilities(id) ON DELETE RESTRICT,
-  unit_id       TEXT REFERENCES units(id) ON DELETE SET NULL,
-  title         TEXT NOT NULL,
-  description   TEXT,
-  category      TEXT NOT NULL DEFAULT 'general',
-  priority      TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high','urgent')),
-  status        TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','waiting','done','cancelled')),
-  assigned_to   TEXT REFERENCES users(id) ON DELETE SET NULL,
-  unit_unavailable INTEGER NOT NULL DEFAULT 0,
-  due_date      TEXT,
-  completed_at  TEXT,
-  resolution    TEXT,
-  reported_by   TEXT,
-  created_at    TEXT NOT NULL,
-  updated_at    TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_maintenance_status ON maintenance_tickets(facility_id, status);
-
-CREATE TABLE IF NOT EXISTS expenses (
-  id            TEXT PRIMARY KEY,
-  facility_id   TEXT NOT NULL REFERENCES facilities(id) ON DELETE RESTRICT,
-  expense_date  TEXT NOT NULL,
-  category      TEXT NOT NULL,
-  vendor        TEXT,
-  description   TEXT NOT NULL,
-  amount_cents  INTEGER NOT NULL CHECK (amount_cents > 0),
-  method        TEXT,
-  reference     TEXT,
-  maintenance_id TEXT REFERENCES maintenance_tickets(id) ON DELETE SET NULL,
-  unit_id       TEXT REFERENCES units(id) ON DELETE SET NULL,
-  created_by    TEXT,
-  created_at    TEXT NOT NULL,
-  updated_at    TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(facility_id, expense_date);
-
 -- ---------------------------------------------------------------- documents
 
 CREATE TABLE IF NOT EXISTS documents (
   id            TEXT PRIMARY KEY,
-  entity        TEXT NOT NULL,               -- renter, agreement, unit, maintenance, expense
+  entity        TEXT NOT NULL,               -- renter, agreement, unit
   entity_id     TEXT NOT NULL,
   renter_id     TEXT REFERENCES renters(id) ON DELETE CASCADE, -- owner, for portal scoping
   name          TEXT NOT NULL,

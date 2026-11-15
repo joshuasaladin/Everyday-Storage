@@ -1,41 +1,13 @@
 import { id, type DB } from "./db";
 import { nowIso, today } from "./clock";
 
-export const UNIT_TYPES = [
-  { value: "standard", label: "Standard" },
-  { value: "climate", label: "Climate controlled" },
-  { value: "drive_up", label: "Drive-up" },
-  { value: "container", label: "Container" },
-  { value: "locker", label: "Locker" },
-  { value: "parking", label: "Vehicle / boat parking" },
-];
-
-export const UNIT_SIZES = [
-  { value: "small", label: "Small" },
-  { value: "medium", label: "Medium" },
-  { value: "large", label: "Large" },
-  { value: "xl", label: "Extra large" },
-];
-
-export const UNIT_STATUSES = [
-  { value: "available", label: "Available", tone: "good" },
-  { value: "occupied", label: "Occupied", tone: "info" },
-  { value: "reserved", label: "Reserved", tone: "warn" },
-  { value: "maintenance", label: "Maintenance", tone: "bad" },
-  { value: "unavailable", label: "Unavailable", tone: "muted" },
-] as const;
-
-export type UnitStatus = (typeof UNIT_STATUSES)[number]["value"];
-
-export function label(list: readonly { value: string; label: string }[], value: unknown): string {
-  return list.find((o) => o.value === value)?.label ?? String(value ?? "—");
-}
+export { UNIT_TYPES, UNIT_SIZES, UNIT_STATUSES, SIZE_PRESETS, label, type UnitStatus } from "./unit-options";
+import type { UnitStatus } from "./unit-options";
 
 /**
  * A unit's status is never typed in — it follows from what is attached to it:
- * occupied (a running agreement) › maintenance (a ticket that blocks renting)
- * › unavailable (switched offline) › reserved (a hold, or an agreement that has
- * not started / not been signed) › available.
+ * occupied (a running agreement) › unavailable (switched offline) › reserved
+ * (a hold, or an agreement that has not started / not been signed) › available.
  */
 export function syncUnitStatus(db: DB, unitId: string | null | undefined, asOf: string = today()): void {
   if (!unitId) return;
@@ -49,14 +21,6 @@ export function syncUnitStatus(db: DB, unitId: string | null | undefined, asOf: 
   );
   let status: UnitStatus = "available";
   if (live && live.status === "active" && live.start_date <= asOf) status = "occupied";
-  else if (
-    db.one(
-      `SELECT 1 FROM maintenance_tickets WHERE unit_id = ? AND unit_unavailable = 1
-        AND status NOT IN ('done','cancelled') LIMIT 1`,
-      [unitId],
-    )
-  )
-    status = "maintenance";
   else if (unit.offline) status = "unavailable";
   else if (
     live ||
@@ -78,13 +42,12 @@ export type UnitInput = {
   unit_number: string;
   type: string;
   size_label: string;
-  width_ft: number;
-  depth_ft: number;
-  height_ft: number;
+  width_m: number;
+  depth_m: number;
+  height_m: number;
   location: string | null;
   monthly_price_cents: number;
   offline: number;
-  available_from: string | null;
   features: string | null;
   notes: string | null;
 };
@@ -112,12 +75,12 @@ export function createUnit(db: DB, input: UnitInput): string {
   const cell = nextFreeCell(db, input.facility_id);
   const stamp = nowIso();
   db.run(
-    `INSERT INTO units (id, facility_id, unit_number, type, size_label, width_ft, depth_ft, height_ft, location,
-                        monthly_price_cents, offline, available_from, features, notes, map_x, map_y, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO units (id, facility_id, unit_number, type, size_label, width_m, depth_m, height_m, location,
+                        monthly_price_cents, offline, features, notes, map_x, map_y, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      unitId, input.facility_id, input.unit_number, input.type, input.size_label, input.width_ft, input.depth_ft,
-      input.height_ft, input.location, input.monthly_price_cents, input.offline, input.available_from,
+      unitId, input.facility_id, input.unit_number, input.type, input.size_label, input.width_m, input.depth_m,
+      input.height_m, input.location, input.monthly_price_cents, input.offline,
       input.features, input.notes, cell.x, cell.y, stamp, stamp,
     ],
   );
@@ -129,12 +92,12 @@ export function createUnit(db: DB, input: UnitInput): string {
 
 export function updateUnit(db: DB, unitId: string, input: UnitInput): void {
   db.run(
-    `UPDATE units SET unit_number = ?, type = ?, size_label = ?, width_ft = ?, depth_ft = ?, height_ft = ?,
-            location = ?, monthly_price_cents = ?, offline = ?, available_from = ?, features = ?, notes = ?, updated_at = ?
+    `UPDATE units SET unit_number = ?, type = ?, size_label = ?, width_m = ?, depth_m = ?, height_m = ?,
+            location = ?, monthly_price_cents = ?, offline = ?, features = ?, notes = ?, updated_at = ?
       WHERE id = ?`,
     [
-      input.unit_number, input.type, input.size_label, input.width_ft, input.depth_ft, input.height_ft,
-      input.location, input.monthly_price_cents, input.offline, input.available_from, input.features,
+      input.unit_number, input.type, input.size_label, input.width_m, input.depth_m, input.height_m,
+      input.location, input.monthly_price_cents, input.offline, input.features,
       input.notes, nowIso(), unitId,
     ],
   );

@@ -7,7 +7,7 @@ import { like, listParams, param, type Query } from "@/lib/query";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Audit log" };
 
-const LINKS: Record<string, string> = { unit: "/units", renter: "/renters", agreement: "/agreements", invoice: "/invoices", payment: "/payments", maintenance: "/maintenance" };
+const LINKS: Record<string, string> = { unit: "/units", renter: "/renters", agreement: "/agreements", invoice: "/invoices", payment: "/payments" };
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<Query> }) {
   const ctx = await requireStaff("audit.view");

@@ -9,7 +9,6 @@ import { can } from "@/lib/roles";
 import { deleteUnitAction } from "@/lib/actions/units";
 import { label, UNIT_SIZES, UNIT_STATUSES, UNIT_TYPES, unitOccupant } from "@/lib/units";
 import { AGREEMENT_STATUSES, contractProgress } from "@/lib/agreements";
-import { TICKET_STATUSES } from "@/lib/maintenance";
 import { area, dims, formatDate, money, renterName } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +28,6 @@ export default async function UnitPage({ params }: { params: Promise<{ id: strin
     [id],
   );
   const hold = db.one<Record<string, any>>(`SELECT * FROM reservations WHERE unit_id = ? AND status IN ('pending','confirmed')`, [id]);
-  const tickets = db.all<Record<string, any>>(`SELECT * FROM maintenance_tickets WHERE unit_id = ? ORDER BY created_at DESC LIMIT 8`, [id]);
   const earned = can(role, "finance.view")
     ? db.num(`SELECT COALESCE(SUM(subtotal_cents - discount_cents), 0) FROM invoices WHERE unit_id = ? AND status NOT IN ('void','draft')`, [id])
     : 0;
@@ -57,9 +55,8 @@ export default async function UnitPage({ params }: { params: Promise<{ id: strin
               <Detail label="Type">{label(UNIT_TYPES, unit.type)}</Detail>
               <Detail label="Size class">{label(UNIT_SIZES, unit.size_label)}</Detail>
               <Detail label="Dimensions">{dims(unit)}</Detail>
-              <Detail label="Floor area">{area(unit)} sq ft</Detail>
+              <Detail label="Floor area">{area(unit)} m²</Detail>
               <Detail label="Monthly price">{money(unit.monthly_price_cents, cur)}</Detail>
-              <Detail label="Available from">{unit.status === "available" ? (unit.available_from ? formatDate(unit.available_from) : "Now") : occupant?.move_out_date ? formatDate(occupant.move_out_date) : "—"}</Detail>
               <div className="col-span-2 sm:col-span-3"><Detail label="Features">{unit.features}</Detail></div>
               {unit.notes && <div className="col-span-2 sm:col-span-3"><div className="label">Notes</div><Lines text={unit.notes} /></div>}
             </div>
@@ -93,22 +90,6 @@ export default async function UnitPage({ params }: { params: Promise<{ id: strin
             )}
           </Card>
 
-          <Card title="Maintenance" dense action={can(role, "maintenance.edit") ? <Link href={`/maintenance?new=1&unit=${id}`} className="btn btn-ghost btn-sm"><Icon name="plus" className="w-3.5 h-3.5" />Ticket</Link> : undefined}>
-            {tickets.length === 0 ? <EmptyState title="No maintenance on record" /> : (
-              <ul>
-                {tickets.map((t, i) => (
-                  <li key={t.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: i ? "1px solid var(--line)" : undefined }}>
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/maintenance/${t.id}`} className="link-ink text-sm font-medium">{t.title}</Link>
-                      <div className="text-xs" style={{ color: "var(--ink-3)" }}>{t.ticket_no} · opened {formatDate(t.created_at)}{t.unit_unavailable ? " · blocks renting" : ""}</div>
-                    </div>
-                    <StatusChip list={TICKET_STATUSES} value={t.status} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
           <DocumentsPanel db={db} entity="unit" entityId={id} canEdit={can(role, "units.edit")} />
         </div>
 
@@ -137,7 +118,7 @@ export default async function UnitPage({ params }: { params: Promise<{ id: strin
               </div>
             ) : (
               <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-                {unit.status === "available" ? "Vacant and ready to rent." : unit.status === "maintenance" ? "Blocked by an open maintenance ticket." : "Switched offline."}
+                {unit.status === "available" ? "Vacant and ready to rent." : "Switched offline."}
               </p>
             )}
           </Card>

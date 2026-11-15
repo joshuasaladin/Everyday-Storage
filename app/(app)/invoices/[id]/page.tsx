@@ -25,7 +25,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     [id],
   );
   if (!inv) notFound();
-  const renter = db.one<Record<string, any>>(`SELECT id, kind, first_name, last_name, company, email, address, city FROM renters WHERE id = ?`, [inv.renter_id])!;
+  const renter = db.one<Record<string, any>>(`SELECT id, kind, first_name, last_name, company, email, address FROM renters WHERE id = ?`, [inv.renter_id])!;
   const lines = db.all<Record<string, any>>(`SELECT * FROM invoice_lines WHERE invoice_id = ? ORDER BY sort`, [id]);
   const allocations = db.all<Record<string, any>>(
     `SELECT pa.amount_cents, p.id, p.payment_no, p.received_date, p.method, p.reference FROM payment_allocations pa JOIN payments p ON p.id = pa.payment_id WHERE pa.invoice_id = ? ORDER BY p.received_date`,
@@ -71,7 +71,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <div>
                 <div className="label">Billed to</div>
                 <Link href={`/renters/${renter.id}`} className="link text-base">{renterName(renter)}</Link>
-                <div className="text-sm" style={{ color: "var(--ink-3)" }}>{[renter.address, renter.city].filter(Boolean).join(", ")}</div>
+                <div className="text-sm" style={{ color: "var(--ink-3)" }}>{renter.address}</div>
                 <div className="text-sm" style={{ color: "var(--ink-3)" }}>{renter.email ?? "No email on file"}</div>
               </div>
               <div className="grid grid-cols-2 gap-4">

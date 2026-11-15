@@ -79,7 +79,7 @@ export async function invoicePdf(db: DB, invoiceId: string): Promise<{ bytes: Bu
     doc.font("Helvetica-Bold").fontSize(7).fillColor(MUTED).text("BILLED TO", 48, 134, { characterSpacing: 0.6 });
     doc.font("Helvetica-Bold").fontSize(11).fillColor(INK).text(renterName(renter), 48, 146, { width: 250 });
     doc.font("Helvetica").fontSize(9.5).fillColor(MUTED).text(
-      [renter.kind === "business" ? `Attn. ${renter.first_name} ${renter.last_name}`.trim() : "", renter.address, [renter.city, renter.country].filter(Boolean).join(", "), renter.email].filter(Boolean).join("\n"),
+      [renter.kind === "business" ? `Attn. ${renter.first_name} ${renter.last_name}`.trim() : "", renter.address, renter.email].filter(Boolean).join("\n"),
       { width: 250, lineGap: 1.5 },
     );
     pair(doc, "Issue date", formatDate(inv.issue_date), 330, 134, 100);

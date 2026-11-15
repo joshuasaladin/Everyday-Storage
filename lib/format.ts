@@ -133,14 +133,17 @@ export function renterName(r: { first_name?: unknown; last_name?: unknown; compa
   return person || String(r.company ?? "—");
 }
 
-export function dims(u: { width_ft?: unknown; depth_ft?: unknown; height_ft?: unknown }): string {
-  const w = Number(u.width_ft ?? 0);
-  const d = Number(u.depth_ft ?? 0);
-  const h = Number(u.height_ft ?? 0);
+/** "1.5 × 3 × 2.4 m" — every unit size in the app is in metres. */
+export function dims(u: { width_m?: unknown; depth_m?: unknown; height_m?: unknown }): string {
+  const w = Number(u.width_m ?? 0);
+  const d = Number(u.depth_m ?? 0);
+  const h = Number(u.height_m ?? 0);
   if (!w || !d) return "—";
-  return h ? `${w} × ${d} × ${h} ft` : `${w} × ${d} ft`;
+  const n = (v: number) => String(Math.round(v * 100) / 100);
+  return h ? `${n(w)} × ${n(d)} × ${n(h)} m` : `${n(w)} × ${n(d)} m`;
 }
 
-export function area(u: { width_ft?: unknown; depth_ft?: unknown }): number {
-  return Math.round(Number(u.width_ft ?? 0) * Number(u.depth_ft ?? 0));
+/** Floor area in square metres, to one decimal. */
+export function area(u: { width_m?: unknown; depth_m?: unknown }): number {
+  return Math.round(Number(u.width_m ?? 0) * Number(u.depth_m ?? 0) * 10) / 10;
 }

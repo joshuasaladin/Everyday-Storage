@@ -18,9 +18,9 @@ export default async function ReservePage({ searchParams }: { searchParams: Prom
   syncAllUnits(db);
   const facilities = db.all<Record<string, any>>(`SELECT id, name, address FROM facilities WHERE status = 'active' ORDER BY name`);
   const units = db.all<Record<string, any>>(
-    `SELECT u.id, u.unit_number, u.type, u.size_label, u.width_ft, u.depth_ft, u.height_ft, u.monthly_price_cents, u.features, u.facility_id, f.name AS facility_name
+    `SELECT u.id, u.unit_number, u.type, u.size_label, u.width_m, u.depth_m, u.height_m, u.monthly_price_cents, u.features, u.facility_id, f.name AS facility_name
        FROM units u JOIN facilities f ON f.id = u.facility_id AND f.status = 'active'
-      WHERE u.status = 'available' AND (u.available_from IS NULL OR u.available_from <= date('now', '+30 day')) ORDER BY u.monthly_price_cents, u.unit_number`,
+      WHERE u.status = 'available' ORDER BY u.monthly_price_cents, u.unit_number`,
   );
   const tax = taxRateBp(db);
   const chosen = units.find((u) => u.id === picked);
@@ -62,7 +62,7 @@ export default async function ReservePage({ searchParams }: { searchParams: Prom
                         <div className="text-xs" style={{ color: "var(--ink-3)" }}>per month{tax ? " + tax" : ""}</div>
                       </div>
                     </div>
-                    <div className="text-sm mt-2" style={{ color: "var(--ink-2)" }}>{area(u)} sq ft · Unit {u.unit_number}{facilities.length > 1 ? ` · ${u.facility_name}` : ""}</div>
+                    <div className="text-sm mt-2" style={{ color: "var(--ink-2)" }}>{area(u)} m² · Unit {u.unit_number}{facilities.length > 1 ? ` · ${u.facility_name}` : ""}</div>
                     {u.features && <div className="text-xs mt-1" style={{ color: "var(--ink-3)" }}>{u.features}</div>}
                   </a>
                 ))}

@@ -5,7 +5,6 @@ import { AutoSubmitForm } from "@/components/forms";
 import { BarChart, LineChart } from "@/components/charts";
 import { requireStaff } from "@/lib/auth";
 import { availableYears, yearReport } from "@/lib/report-data";
-import { EXPENSE_CATEGORIES } from "@/lib/maintenance";
 import { label, UNIT_TYPES } from "@/lib/units";
 import { monthLabel } from "@/lib/clock";
 import { compactMoney, formatDate, money, percent, renterName } from "@/lib/format";
@@ -24,7 +23,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const facility = ctx.facilities.find((f) => f.id === ctx.facilityId);
   const receivable = r.aging.reduce((a, b) => a + b.cents, 0);
   const maxAging = Math.max(1, ...r.aging.map((b) => b.cents));
-  const maxCat = Math.max(1, ...r.expenseCategories.map((c) => c.total));
   const maxType = Math.max(1, ...r.unitTypes.map((c) => c.total));
   const dl = (kind: string, format: string) => `/api/reports?year=${year}&kind=${kind}&format=${format}`;
 
@@ -33,7 +31,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         eyebrow={`Reports · ${facility ? facility.name : "All facilities"}`}
         title={`Financial report ${year}`}
-        blurb="Revenue is what was invoiced for each period, net of discounts and excluding tax. Collected is money actually received. Security deposits are shown separately and are never revenue."
+        blurb="Revenue is what was invoiced for each period, net of discounts and excluding tax. Collected is money actually received, net of refunds. Security deposits are shown separately and are never revenue."
         actions={
           <>
             <AutoSubmitForm>
@@ -48,17 +46,17 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Revenue" value={compactMoney(r.totals.revenue, cur)} sub={`plus ${compactMoney(r.totals.tax, cur)} tax collected for the government`} tone="good" icon="chart" />
-        <StatCard label="Expenses" value={compactMoney(r.totals.expenses, cur)} sub={`${r.expenseCategories.length} categories`} tone="neutral" icon="wallet" />
-        <StatCard label="Profit" value={compactMoney(r.totals.profit, cur)} sub={r.totals.revenue ? `${percent(r.totals.profit / r.totals.revenue)} margin` : "revenue − expenses"} tone={r.totals.profit >= 0 ? "good" : "bad"} icon="scale" />
-        <StatCard label="Operating cash flow" value={compactMoney(r.totals.netCash, cur)} sub="collected − refunds − expenses" tone={r.totals.netCash >= 0 ? "info" : "bad"} icon="bank" />
+        <StatCard label="Revenue" value={compactMoney(r.totals.revenue, cur)} sub={`plus ${compactMoney(r.totals.tax, cur)} tax invoiced`} tone="good" icon="chart" />
+        <StatCard label="Collected" value={compactMoney(r.totals.netCash, cur)} sub={r.totals.revenue ? `${percent(r.totals.netCash / (r.totals.revenue + r.totals.tax))} of what was invoiced` : "net of refunds"} tone="info" icon="bank" />
+        <StatCard label="Outstanding" value={compactMoney(receivable, cur)} sub={`${r.aging.reduce((a, b) => a + b.count, 0)} unpaid invoices today`} tone={receivable ? "warn" : "good"} icon="receipt" />
+        <StatCard label="Average occupancy" value={percent(r.totals.avgOccupancy)} sub={`across ${year}`} tone="neutral" icon="building" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-5 mb-5 items-start">
-        <Card title={`Revenue, expenses and profit by month — ${year}`} className="lg:col-span-2">
-          <BarChart ariaLabel={`Monthly revenue, expenses and profit for ${year}`} currency={cur} height={260}
-            series={[{ name: "Revenue", color: "var(--series-1)" }, { name: "Expenses", color: "var(--series-2)" }, { name: "Profit", color: "var(--series-3)" }]}
-            data={r.months.map((m) => ({ label: m.label, note: monthLabel(m.key, true), values: [m.revenue, m.expenses, m.profit] }))} />
+        <Card title={`Revenue and collections by month — ${year}`} className="lg:col-span-2">
+          <BarChart ariaLabel={`Monthly invoiced revenue and money collected for ${year}`} currency={cur} height={260}
+            series={[{ name: "Revenue (invoiced)", color: "var(--series-1)" }, { name: "Collected", color: "var(--series-2)" }]}
+            data={r.months.map((m) => ({ label: m.label, note: monthLabel(m.key, true), values: [m.revenue, m.netCash] }))} />
         </Card>
 
         <Card title="Occupancy trend">
@@ -79,17 +77,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <Card title="Month by month" dense className="mb-5" action={<a href={dl("monthly", "csv")} className="btn btn-ghost btn-sm" download>CSV</a>}>
         <div className="scroll-x">
           <table className="table">
-            <thead><tr><th>Month</th><th className="r">Revenue</th><th className="r">Expenses</th><th className="r">Profit</th><th className="r">Collected</th><th className="r">Refunds</th><th className="r">Net cash</th><th className="r">Deposits in</th><th className="r">Deposits out</th><th className="r">Occupancy</th></tr></thead>
+            <thead><tr><th>Month</th><th className="r">Revenue</th><th className="r">Tax</th><th className="r">Collected</th><th className="r">Refunds</th><th className="r">Net collected</th><th className="r">Deposits in</th><th className="r">Deposits out</th><th className="r">Occupancy</th></tr></thead>
             <tbody>
               {r.months.map((m) => (
                 <tr key={m.key}>
                   <td className="primary">{monthLabel(m.key, true)}</td>
                   <td className="r num">{money(m.revenue, cur)}</td>
-                  <td className="r num">{money(m.expenses, cur)}</td>
-                  <td className="r num" style={{ color: m.profit < 0 ? "var(--bad-fg)" : undefined }}>{money(m.profit, cur)}</td>
+                  <td className="r num">{m.tax ? money(m.tax, cur) : "—"}</td>
                   <td className="r num">{money(m.collected, cur)}</td>
                   <td className="r num">{m.refunds ? money(m.refunds, cur) : "—"}</td>
-                  <td className="r num" style={{ color: m.netCash < 0 ? "var(--bad-fg)" : undefined }}>{money(m.netCash, cur)}</td>
+                  <td className="r num">{money(m.netCash, cur)}</td>
                   <td className="r num">{m.depositsIn ? money(m.depositsIn, cur) : "—"}</td>
                   <td className="r num">{m.depositsOut ? money(m.depositsOut, cur) : "—"}</td>
                   <td className="r num">{m.occupied ? percent(m.occupancy) : "—"}</td>
@@ -98,7 +95,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </tbody>
             <tfoot>
               <tr>
-                <td>{year}</td><td className="r num">{money(r.totals.revenue, cur)}</td><td className="r num">{money(r.totals.expenses, cur)}</td><td className="r num">{money(r.totals.profit, cur)}</td>
+                <td>{year}</td><td className="r num">{money(r.totals.revenue, cur)}</td><td className="r num">{money(r.totals.tax, cur)}</td>
                 <td className="r num">{money(r.totals.collected, cur)}</td><td className="r num">{money(r.totals.refunds, cur)}</td><td className="r num">{money(r.totals.netCash, cur)}</td>
                 <td className="r num">{money(r.totals.depositsIn, cur)}</td><td className="r num">{money(r.totals.depositsOut, cur)}</td><td className="r num">{percent(r.totals.avgOccupancy)}</td>
               </tr>
@@ -125,14 +122,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           )}
         </Card>
 
-        <div className="space-y-5">
-          <Card title={`Expenses by category — ${year}`}>
-            {r.expenseCategories.length === 0 ? <EmptyState title="No expenses recorded" /> : <Bars rows={r.expenseCategories.map((c) => ({ label: label(EXPENSE_CATEGORIES, c.category), value: c.total, max: maxCat, note: `${c.n} entries`, color: "var(--series-2)" }))} cur={cur} />}
-          </Card>
-          <Card title={`Revenue by unit type — ${year}`}>
+        <Card title={`Revenue by unit type — ${year}`}>
             {r.unitTypes.length === 0 ? <EmptyState title="No revenue yet" /> : <Bars rows={r.unitTypes.map((c) => ({ label: label(UNIT_TYPES, c.type), value: c.total, max: maxType, note: `${c.n} units`, color: "var(--series-1)" }))} cur={cur} />}
-          </Card>
-        </div>
+        </Card>
       </div>
     </>
   );

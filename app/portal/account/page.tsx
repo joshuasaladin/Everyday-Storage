@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PortalAccountPage() {
   const ctx = await requireRenter();
-  const r = ctx.db.one<Record<string, any>>(`SELECT first_name, last_name, company, email, phone, address, city, country FROM renters WHERE id = ?`, [ctx.renterId])!;
+  const r = ctx.db.one<Record<string, any>>(`SELECT first_name, last_name, company, email, phone, address FROM renters WHERE id = ?`, [ctx.renterId])!;
   return (
     <>
       <h1 className="page-title mb-5">Account</h1>
@@ -17,7 +17,7 @@ export default async function PortalAccountPage() {
             {r.company && <Detail label="Company">{r.company}</Detail>}
             <Detail label="Email (sign-in)">{ctx.user.email}</Detail>
             <Detail label="Phone">{r.phone}</Detail>
-            <Detail label="Address">{[r.address, r.city, r.country].filter(Boolean).join(", ")}</Detail>
+            <Detail label="Address">{r.address}</Detail>
           </div>
           <p className="hint mt-4">To change any of these, contact us — {[ctx.settings.business_phone, ctx.settings.business_email].filter(Boolean).join(" · ") || "at the office"}.</p>
         </Card>

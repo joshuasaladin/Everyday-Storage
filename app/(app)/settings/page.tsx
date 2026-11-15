@@ -319,7 +319,7 @@ function Facilities({ ctx }: { ctx: Ctx }) {
           </table>
         </div>
       )}
-      <div className="px-4 py-3 text-xs hair" style={{ color: "var(--ink-3)" }}>Units, agreements, invoices, payments and expenses all belong to a facility. Use the facility picker in the header to view one site or all of them together.</div>
+      <div className="px-4 py-3 text-xs hair" style={{ color: "var(--ink-3)" }}>Units, agreements, invoices and payments all belong to a facility. Use the facility picker in the header to view one site or all of them together.</div>
     </Card>
   );
 }

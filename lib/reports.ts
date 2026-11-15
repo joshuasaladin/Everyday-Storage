@@ -10,8 +10,7 @@ import { addDays, addMonths, daysBetween, endOfMonth, monthLabel, startOfMonth, 
  *                plus any forfeited deposits
  *   collected  — money actually received, by date received (cash)
  *   deposits   — a liability ledger; never part of revenue or collected
- *   profit     — revenue − expenses
- *   net cash   — collected − refunds − expenses
+ *   net collected — collected − refunds
  */
 type Fac = string | null;
 const fw = (facilityId: Fac, col = "facility_id") => (facilityId ? ` AND ${col} = ?` : "");
@@ -24,8 +23,6 @@ export type MonthRow = {
   tax: number;
   collected: number;
   refunds: number;
-  expenses: number;
-  profit: number;
   netCash: number;
   depositsIn: number;
   depositsOut: number;
@@ -65,7 +62,6 @@ export function monthlySeries(db: DB, keys: string[], facilityId: Fac): MonthRow
   const forfeited = byMonth(db, `SELECT substr(txn_date, 1, 7) AS m, SUM(amount_cents) AS v FROM deposit_transactions WHERE type = 'forfeited'${fw(facilityId)} GROUP BY m`, f);
   const collected = byMonth(db, `SELECT substr(received_date, 1, 7) AS m, SUM(amount_cents) AS v FROM payments WHERE method <> 'deposit'${fw(facilityId)} GROUP BY m`, f);
   const refunds = byMonth(db, `SELECT substr(r.refund_date, 1, 7) AS m, SUM(r.amount_cents) AS v FROM refunds r JOIN payments p ON p.id = r.payment_id WHERE 1 = 1${fw(facilityId, "p.facility_id")} GROUP BY m`, f);
-  const expenses = byMonth(db, `SELECT substr(expense_date, 1, 7) AS m, SUM(amount_cents) AS v FROM expenses WHERE 1 = 1${fw(facilityId)} GROUP BY m`, f);
   const depIn = byMonth(db, `SELECT substr(txn_date, 1, 7) AS m, SUM(amount_cents) AS v FROM deposit_transactions WHERE type = 'collected'${fw(facilityId)} GROUP BY m`, f);
   const depOut = byMonth(db, `SELECT substr(txn_date, 1, 7) AS m, SUM(amount_cents) AS v FROM deposit_transactions WHERE type = 'refunded'${fw(facilityId)} GROUP BY m`, f);
   const units = db.num(`SELECT COUNT(*) FROM units WHERE 1 = 1${fw(facilityId)}`, f);
@@ -76,13 +72,12 @@ export function monthlySeries(db: DB, keys: string[], facilityId: Fac): MonthRow
     const day = end > t ? t : end;
     const future = `${key}-01` > t;
     const rev = (revenue.get(key) ?? 0) - (goodwill.get(key) ?? 0) + (forfeited.get(key) ?? 0);
-    const exp = expenses.get(key) ?? 0;
     const col = collected.get(key) ?? 0;
     const ref = refunds.get(key) ?? 0;
     const occupied = future ? 0 : occupiedOn(db, day, facilityId);
     return {
-      key, label: monthLabel(key), revenue: rev, tax: tax.get(key) ?? 0, collected: col, refunds: ref, expenses: exp,
-      profit: rev - exp, netCash: col - ref - exp, depositsIn: depIn.get(key) ?? 0, depositsOut: depOut.get(key) ?? 0,
+      key, label: monthLabel(key), revenue: rev, tax: tax.get(key) ?? 0, collected: col, refunds: ref,
+      netCash: col - ref, depositsIn: depIn.get(key) ?? 0, depositsOut: depOut.get(key) ?? 0,
       occupied, units, occupancy: units ? occupied / units : 0,
     };
   });
@@ -142,14 +137,6 @@ export function forecast(db: DB, facilityId: Fac, months = 6): ForecastRow[] {
   });
 }
 
-export function expensesByCategory(db: DB, facilityId: Fac, from: string, to: string) {
-  return db.all<{ category: string; total: number; n: number }>(
-    `SELECT category, SUM(amount_cents) AS total, COUNT(*) AS n FROM expenses
-      WHERE expense_date BETWEEN ? AND ?${fw(facilityId)} GROUP BY category ORDER BY total DESC`,
-    [from, to, ...fp(facilityId)],
-  );
-}
-
 export function revenueByUnitType(db: DB, facilityId: Fac, from: string, to: string) {
   return db.all<{ type: string; total: number; n: number }>(
     `SELECT COALESCE(u.type, 'other') AS type, SUM(i.subtotal_cents - i.discount_cents) AS total, COUNT(DISTINCT i.unit_id) AS n
@@ -185,7 +172,6 @@ export function dashboard(db: DB, facilityId: Fac) {
     occupied,
     available: counts.available ?? 0,
     reserved: counts.reserved ?? 0,
-    maintenance: counts.maintenance ?? 0,
     unavailable: counts.unavailable ?? 0,
     occupancy: total ? occupied / total : 0,
     mrr: db.num(`SELECT COALESCE(SUM(monthly_rate_cents - discount_cents), 0) FROM agreements WHERE status = 'active' AND start_date <= ?${fw(facilityId)}`, [t, ...f]),
@@ -197,7 +183,6 @@ export function dashboard(db: DB, facilityId: Fac) {
     collectedThisMonth: db.num(`SELECT COALESCE(SUM(amount_cents - refunded_cents), 0) FROM payments WHERE method <> 'deposit' AND received_date >= ?${fw(facilityId)}`, [monthStart, ...f]),
     depositsHeld: db.num(`SELECT COALESCE(SUM(CASE WHEN type = 'collected' THEN amount_cents ELSE -amount_cents END), 0) FROM deposit_transactions WHERE 1 = 1${fw(facilityId)}`, f),
     pendingSignatures: db.num(`SELECT COUNT(*) FROM agreements WHERE status = 'pending_signature'${fw(facilityId)}`, f),
-    openTickets: db.num(`SELECT COUNT(*) FROM maintenance_tickets WHERE status NOT IN ('done','cancelled')${fw(facilityId)}`, f),
     waitlist: db.num(`SELECT COUNT(*) FROM reservations WHERE status = 'waitlist'${fw(facilityId)}`, f),
     holds: db.num(`SELECT COUNT(*) FROM reservations WHERE status IN ('pending','confirmed')${fw(facilityId)}`, f),
     expiring: db.all<Record<string, any>>(

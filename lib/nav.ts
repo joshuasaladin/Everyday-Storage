@@ -25,14 +25,12 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/invoices", label: "Invoices", icon: "receipt", cap: "finance.view" },
       { href: "/payments", label: "Payments", icon: "card", cap: "finance.view" },
-      { href: "/expenses", label: "Expenses", icon: "wallet", cap: "finance.view" },
       { href: "/reports", label: "Reports", icon: "chart", cap: "reports.view" },
     ],
   },
   {
     group: "Operations",
     items: [
-      { href: "/maintenance", label: "Maintenance", icon: "wrench", cap: "maintenance.view" },
       { href: "/automations", label: "Automations", icon: "zap", cap: "automations.view" },
     ],
   },

@@ -31,8 +31,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
     `SELECT u.*,
             a.id AS agreement_id, a.end_date, a.term_type, a.status AS ag_status, a.start_date, a.move_out_date,
             r.id AS renter_id, r.first_name, r.last_name, r.company, r.kind,
-            res.name AS res_name, res.hold_until,
-            (SELECT title FROM maintenance_tickets m WHERE m.unit_id = u.id AND m.unit_unavailable = 1 AND m.status NOT IN ('done','cancelled') LIMIT 1) AS ticket
+            res.name AS res_name, res.hold_until
        FROM units u
        LEFT JOIN agreements a ON a.unit_id = u.id AND a.status IN ('active','pending_signature')
        LEFT JOIN renters r ON r.id = a.renter_id
@@ -54,7 +53,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         : u.move_out_date ? `Moving out ${formatDate(u.move_out_date)}`
         : u.term_type === "fixed" ? `Fixed term to ${formatDate(u.end_date)}` : `Month-to-month since ${formatDate(u.start_date)}`
       : u.hold_until ? `Held until ${formatDate(u.hold_until)}` : null,
-    note: u.ticket ? `Blocked by maintenance: ${u.ticket}` : u.offline ? "Switched offline" : null,
+    note: u.offline ? "Switched offline" : null,
   }));
 
   return (

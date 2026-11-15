@@ -22,8 +22,8 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
   const { db } = ctx;
   // the encrypted ID number is never selected here
   const r = db.one<Record<string, any>>(
-    `SELECT id, renter_no, kind, first_name, last_name, company, email, phone, phone_alt, id_type, id_last4, address, city, country,
-            emergency_name, emergency_phone, emergency_relation, status, notes, created_at FROM renters WHERE id = ?`,
+    `SELECT id, renter_no, kind, first_name, last_name, company, email, phone, id_type, id_last4, address, status, notes, created_at
+       FROM renters WHERE id = ?`,
     [id],
   );
   if (!r) notFound();
@@ -144,8 +144,8 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
             <div className="space-y-3">
               {r.kind === "business" && <Detail label="Contact person">{`${r.first_name} ${r.last_name}`.trim()}</Detail>}
               <Detail label="Email">{r.email && <a className="link" href={`mailto:${r.email}`}>{r.email}</a>}</Detail>
-              <Detail label="Phone">{[r.phone, r.phone_alt].filter(Boolean).join(" · ")}</Detail>
-              <Detail label="Address">{[r.address, r.city, r.country].filter(Boolean).join(", ")}</Detail>
+              <Detail label="Phone">{r.phone}</Detail>
+              <Detail label="Address">{r.address}</Detail>
               <Detail label="Identification">
                 {r.id_type ? `${label(ID_TYPES, r.id_type)}${r.id_last4 ? ` ending ${r.id_last4}` : ""}` : null}
               </Detail>
@@ -154,16 +154,6 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
               )}
               {r.notes && <div><div className="label">Notes</div><Lines text={r.notes} /></div>}
             </div>
-          </Card>
-
-          <Card title="Emergency contact">
-            {r.emergency_name || r.emergency_phone ? (
-              <div className="space-y-3">
-                <Detail label="Name">{r.emergency_name}</Detail>
-                <Detail label="Phone">{r.emergency_phone}</Detail>
-                <Detail label="Relationship">{r.emergency_relation}</Detail>
-              </div>
-            ) : <p className="text-sm" style={{ color: "var(--ink-3)" }}>None on file.</p>}
           </Card>
 
           <Card title="Customer portal">

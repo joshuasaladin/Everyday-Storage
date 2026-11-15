@@ -82,7 +82,11 @@ function open(ws: Workspace, file?: string): DB {
   raw.pragma("journal_mode = WAL");
   raw.pragma("foreign_keys = ON");
   raw.pragma("busy_timeout = 5000");
+  const fresh = !raw.prepare(`SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'units'`).get();
   raw.exec(fs.readFileSync(path.join(process.cwd(), "db", "schema.sql"), "utf8"));
+  const { migrate, SCHEMA_VERSION } = require("./migrate") as typeof import("./migrate");
+  if (fresh) raw.pragma(`user_version = ${SCHEMA_VERSION}`);
+  else migrate(raw);
   return new DB(raw, ws);
 }
 
@@ -90,6 +94,7 @@ export function getDb(ws: Workspace): DB {
   global.__shqDbs ??= {};
   let db = global.__shqDbs[ws];
   if (!db) {
+    if (ws === "demo") resetStaleDemo();
     db = open(ws);
     global.__shqDbs[ws] = db;
     // lazy requires: bootstrap pulls in modules that import this file
@@ -97,6 +102,23 @@ export function getDb(ws: Workspace): DB {
     bootstrap(db);
   }
   return db;
+}
+
+/**
+ * Example data is cheaper to rebuild than to migrate: when the code expects a
+ * newer schema than the demo file has, the demo is thrown away and re-seeded.
+ */
+function resetStaleDemo(): void {
+  const file = path.join(workspaceDir("demo"), "storage-demo.db");
+  if (!fs.existsSync(file)) return;
+  const { SCHEMA_VERSION } = require("./migrate") as typeof import("./migrate");
+  const probe = new Database(file);
+  const version = Number(probe.pragma("user_version", { simple: true }));
+  probe.close();
+  if (version < SCHEMA_VERSION) {
+    for (const f of ["storage-demo.db", "storage-demo.db-wal", "storage-demo.db-shm"]) fs.rmSync(path.join(workspaceDir("demo"), f), { force: true });
+    fs.rmSync(uploadDir("demo"), { recursive: true, force: true });
+  }
 }
 
 /** An isolated in-memory database with schema + defaults — used by the tests. */

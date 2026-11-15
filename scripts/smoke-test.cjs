@@ -62,19 +62,25 @@ const stamp = String(Date.now()).slice(-6);
   await step("creates a storage unit", async () => {
     await page.goto(`${base}/units/new`);
     await page.fill('input[name="unit_number"]', `T${stamp}`);
-    await page.fill('input[name="width_ft"]', "6");
-    await page.fill('input[name="depth_ft"]', "8");
+    // Small fills in 1.5 × 3 × 2.4 m; Large clears the size for a warehouse
+    await page.selectOption('select[name="size_label"]', "small");
+    if ((await page.inputValue('input[name="width_m"]')) !== "1.5" || (await page.inputValue('input[name="depth_m"]')) !== "3" || (await page.inputValue('input[name="height_m"]')) !== "2.4") throw new Error("small did not fill 1.5 × 3 × 2.4");
+    await page.selectOption('select[name="type"]', "warehouse");
+    if ((await page.inputValue('select[name="size_label"]')) !== "large" || (await page.inputValue('input[name="width_m"]')) !== "") throw new Error("warehouse did not switch to an open large size");
+    await page.selectOption('select[name="size_label"]', "standard");
+    if ((await page.inputValue('input[name="width_m"]')) !== "3" || (await page.inputValue('select[name="type"]')) !== "storage_unit") throw new Error("standard did not fill 3 × 3 × 2.4");
+    if (await page.locator('input[name="available_from"]').count()) throw new Error("available-from field still present");
     await page.fill('input[name="monthly_price"]', "99.50");
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/units\/[0-9a-f-]{36}$/);
+    await page.waitForSelector("text=3 × 3 × 2.4 m");
+    await page.waitForSelector("text=9 m²");
     await page.waitForSelector("text=Available");
     unitUrl = page.url();
   });
   await step("refuses a duplicate unit number", async () => {
     await page.goto(`${base}/units/new`);
     await page.fill('input[name="unit_number"]', `T${stamp}`);
-    await page.fill('input[name="width_ft"]', "6");
-    await page.fill('input[name="depth_ft"]', "8");
     await page.fill('input[name="monthly_price"]', "99.50");
     await page.click('button[type="submit"]');
     await page.waitForSelector("text=already exists");
@@ -88,6 +94,9 @@ const stamp = String(Date.now()).slice(-6);
     await page.fill('input[name="email"]', `smoke${stamp}@example.com`);
     await page.fill('input[name="phone"]', "+297 555 0100");
     await page.fill('input[name="id_number"]', "ID-998877");
+    for (const gone of ["phone_alt", "city", "country", "emergency_name", "emergency_phone", "emergency_relation"]) {
+      if (await page.locator(`[name="${gone}"]`).count()) throw new Error(`renter form still has ${gone}`);
+    }
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/renters\/[0-9a-f-]{36}$/);
     renterUrl = page.url();
@@ -189,7 +198,7 @@ const stamp = String(Date.now()).slice(-6);
     await card.locator('button:has-text("Run now")').click();
     await card.locator("text=0 invoices created").first().waitFor({ timeout: 20000 });
   });
-  for (const [path, name] of [["/units", "05-units"], ["/renters", "06-renters"], ["/invoices", "07-invoices"], ["/payments", "08-payments"], ["/reports", "09-reports"], ["/automations", "10-automations"], ["/maintenance", "11-maintenance"], ["/reservations", "12-reservations"], ["/settings?tab=billing", "13-settings"]]) {
+  for (const [path, name] of [["/units", "05-units"], ["/renters", "06-renters"], ["/invoices", "07-invoices"], ["/payments", "08-payments"], ["/reports", "09-reports"], ["/automations", "10-automations"], ["/reservations", "12-reservations"], ["/settings?tab=billing", "13-settings"]]) {
     await step(`renders ${path}`, async () => {
       const res = await page.goto(`${base}${path}`, { waitUntil: "networkidle" });
       if (res.status() !== 200) throw new Error(`status ${res.status()}`);
@@ -206,6 +215,28 @@ const stamp = String(Date.now()).slice(-6);
     }
     throw new Error(`could not switch to ${want}`);
   };
+  await step("maintenance and expenses are gone", async () => {
+    for (const label of ["Maintenance", "Expenses"]) {
+      if (await page.locator(`aside nav >> text=${label}`).count()) throw new Error(`${label} is still in the menu`);
+    }
+    for (const path of ["/maintenance", "/expenses"]) {
+      const res = await page.goto(`${base}${path}`);
+      if (res.status() !== 404) throw new Error(`${path} returned ${res.status()}`);
+    }
+  });
+
+  await step("the booking link is the full public address (live workspace)", async () => {
+    const c = await context();
+    const p = await c.newPage();
+    const [email, password] = (process.env.SMOKE_ADMIN ?? "admin@everydaystorage.aw:storage2026").split(":");
+    await login(p, email, password);
+    await p.waitForURL(`${base}/`);
+    await p.goto(`${base}/reservations`);
+    const href = await p.locator('a:has-text("/reserve")').first().getAttribute("href");
+    if (!/^https?:\/\/[^/]+\/reserve$/.test(href ?? "")) throw new Error(`booking link is ${href}`);
+    await c.close();
+  });
+
   await step("dark mode", async () => {
     await page.goto(`${base}/`);
     await setTheme("dark");
