@@ -55,7 +55,7 @@ function pair(doc: PDFKit.PDFDocument, label: string, value: string, x: number, 
 }
 
 function footer(doc: PDFKit.PDFDocument, text: string) {
-  doc.font("Helvetica").fontSize(8).fillColor(MUTED).text(text, 48, 790, { width: 499, align: "center", lineBreak: false });
+  doc.font("Helvetica").fontSize(8).fillColor(MUTED).text(text, 48, 778, { width: 499, align: "center", lineBreak: false, height: 10 });
 }
 
 export async function invoicePdf(db: DB, invoiceId: string): Promise<{ bytes: Buffer; filename: string }> {
@@ -104,13 +104,13 @@ export async function invoicePdf(db: DB, invoiceId: string): Promise<{ bytes: Bu
 
     y += 8;
     const row = (label: string, value: string, bold = false) => {
-      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 11 : 10).fillColor(bold ? INK : MUTED).text(label, 330, y, { width: 110 });
+      doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 11 : 10).fillColor(bold ? INK : MUTED).text(label, 290, y, { width: 160, lineBreak: false });
       doc.fillColor(INK).text(value, 447, y, { width: 90, align: "right" });
       y += bold ? 20 : 16;
     };
     row("Subtotal", m(inv.subtotal_cents - inv.discount_cents, cur));
     if (inv.tax_cents > 0 || inv.tax_rate_bp > 0) row(`${inv.tax_label ?? "Tax"} (${(inv.tax_rate_bp / 100).toFixed(inv.tax_rate_bp % 100 ? 2 : 0)}%)`, m(inv.tax_cents, cur));
-    doc.moveTo(330, y).lineTo(547, y).lineWidth(0.8).strokeColor(INK).stroke();
+    doc.moveTo(290, y).lineTo(547, y).lineWidth(0.8).strokeColor(INK).stroke();
     y += 7;
     row("Total", m(inv.total_cents, cur), true);
     if (inv.paid_cents > 0) row("Paid", m(-inv.paid_cents, cur));
