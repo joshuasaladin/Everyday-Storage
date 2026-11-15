@@ -41,7 +41,7 @@ facilities ─┬─ units ─────────────┬─ agreeme
             │                     │              │      │
             │   renters ──────────┘              │      ├─ payment_allocations ── payments ── refunds
             │      │                             │      └─ credit_applications ── credits
-            │      └─ users (portal login)       ├─ deposit_transactions      (liability ledger)
+            │                                    ├─ deposit_transactions      (liability ledger)
             │                                    ├─ agreement_renewals
             └─ reservations (hold or waitlist)   └─ move_outs
 
