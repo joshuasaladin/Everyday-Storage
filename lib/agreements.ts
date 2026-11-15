@@ -175,7 +175,7 @@ export function signAgreement(db: DB, actor: Actor, agreementId: string, sig: Si
     if (!ag) throw new Error("Agreement not found.");
     if (ag.status !== "pending_signature") throw new Error("This agreement is not awaiting a signature.");
     if (!sig.name.trim()) throw new Error("Type the signer's full name.");
-    if (sig.method !== "paper" && !(sig.signature_png ?? "").startsWith("data:image/png;base64,")) {
+    if (sig.method !== "paper" && (!(sig.signature_png ?? "").startsWith("data:image/png;base64,") || (sig.signature_png ?? "").length < 600)) {
       throw new Error("Draw a signature in the box.");
     }
     if ((sig.signature_png?.length ?? 0) > 400_000) throw new Error("That signature image is too large.");

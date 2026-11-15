@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "db:reset-demo": "node scripts/reset-demo.mjs",
-    "smoke": "node scripts/smoke-test.mjs"
+    "smoke": "node scripts/smoke-test.cjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

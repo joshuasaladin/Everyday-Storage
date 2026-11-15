@@ -1,0 +1,41 @@
+# Render Blueprint for Everyday Storage HQ.
+# In Render: New → Blueprint → connect this repository → Apply.
+
+services:
+  - type: web
+    name: everyday-storage-hq
+    runtime: node
+    plan: starter          # a persistent disk needs a paid instance
+    region: virginia       # closest Render region to Aruba
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    # Both databases (live + demo) and every uploaded document live here,
+    # so they survive deploys and restarts.
+    disk:
+      name: storage-hq-data
+      mountPath: /var/data
+      sizeGB: 5
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: APP_SECRET
+        generateValue: true     # encrypts renter ID numbers — never rotate without re-encrypting
+      # Set these in the Render dashboard before the first deploy.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: APP_URL
+        sync: false
+      # Optional: real email delivery.
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false

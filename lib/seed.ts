@@ -264,10 +264,10 @@ export function seedDemo(db: DB): void {
 
     // ---- expenses: the steady monthly costs, plus the odd repair
     const monthly: [string, string, string, number, string][] = [
-      ["utilities", "N.V. Elmar", "Electricity", 61000, "ora"], ["utilities", "WEB Aruba N.V.", "Water", 9500, "ora"],
-      ["utilities", "Setar N.V.", "Internet & gate line", 12900, "ora"], ["insurance", "Nagico Insurances", "Property insurance", 48000, "ora"],
-      ["security", "Aruba Alarm Systems", "Alarm monitoring & cameras", 27500, "ora"], ["payroll", "Payroll", "Site staff wages", 265000, "ora"],
-      ["software", "Storage HQ & bank fees", "Software and banking fees", 8900, "ora"], ["rent_lease", "Land Aruba", "Land lease — Noord yard", 90000, "nrd"],
+      ["utilities", "N.V. Elmar", "Electricity", 42000, "ora"], ["utilities", "WEB Aruba N.V.", "Water", 9500, "ora"],
+      ["utilities", "Setar N.V.", "Internet & gate line", 12900, "ora"], ["insurance", "Nagico Insurances", "Property insurance", 30000, "ora"],
+      ["security", "Aruba Alarm Systems", "Alarm monitoring & cameras", 27500, "ora"], ["payroll", "Payroll", "Site staff wages", 120000, "ora"],
+      ["software", "Storage HQ & bank fees", "Software and banking fees", 8900, "ora"], ["rent_lease", "Land Aruba", "Land lease — Noord yard", 45000, "nrd"],
       ["utilities", "N.V. Elmar", "Electricity — Noord yard", 14500, "nrd"],
     ];
     for (let m = 14; m >= 0; m--) {

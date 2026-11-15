@@ -8,4 +8,4 @@ export function toCsv(columns: string[], rows: unknown[][]): string {
   return [columns, ...rows].map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
 }
 
-export const dollars = (cents: unknown) => (Number(cents ?? 0) / 100).toFixed(2);
+export const csv$ = (cents: unknown) => (Number(cents ?? 0) / 100).toFixed(2);
