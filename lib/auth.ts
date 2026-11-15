@@ -92,7 +92,8 @@ function userForToken(db: DB, token: string | undefined): User | null {
     [sha256(token)],
   );
   if (!row) return null;
-  if (new Date(row.expires_at) < new Date() || row.status !== "active") {
+  // customers have no sign-in: a renter account can never hold a session
+  if (new Date(row.expires_at) < new Date() || row.status !== "active" || row.role === "renter") {
     db.run(`DELETE FROM sessions WHERE token_hash = ?`, [sha256(token)]);
     return null;
   }
@@ -124,20 +125,12 @@ export async function getCtx(): Promise<Ctx | null> {
   };
 }
 
-/** Staff pages. Redirects to sign-in, to the portal (renters), or home with a notice when the role is too low. */
+/** Staff pages. Redirects to sign-in, or home with a notice when the role is too low. */
 export async function requireStaff(cap?: Cap): Promise<Ctx> {
   const ctx = await getCtx();
   if (!ctx) redirect("/login");
-  if (ctx.user.role === "renter") redirect("/portal");
   if (cap && !can(ctx.user.role, cap)) redirect("/?denied=1");
   return ctx;
-}
-
-export async function requireRenter(): Promise<Ctx & { renterId: string }> {
-  const ctx = await getCtx();
-  if (!ctx) redirect("/login");
-  if (ctx.user.role !== "renter" || !ctx.user.renter_id) redirect("/");
-  return { ...ctx, renterId: ctx.user.renter_id };
 }
 
 export async function setFacility(facilityId: string | null) {
@@ -170,7 +163,7 @@ export async function login(ws: Workspace, emailRaw: string, password: string): 
   // same work whether or not the account exists, so timing says nothing
   const valid = verifyPassword(password, user?.password_hash ?? "scrypt:00:00") && Boolean(user);
   db.run(`INSERT INTO login_attempts (email, ip, success, at) VALUES (?, ?, ?, ?)`, [email, ip, valid ? 1 : 0, nowIso()]);
-  if (!valid || !user) return { ok: false, error: "That email and password do not match." };
+  if (!valid || !user || user.role === "renter") return { ok: false, error: "That email and password do not match." };
   if (user.status !== "active") return { ok: false, error: "This account has been disabled." };
   await createSession(ws, user.id);
   audit(db, { id: user.id, name: user.name, role: user.role, ip }, "login", "user", user.id, "Signed in");

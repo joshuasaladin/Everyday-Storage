@@ -8,7 +8,7 @@ export const metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
   const ctx = await getCtx();
-  if (ctx) redirect(ctx.user.role === "renter" ? "/portal" : "/");
+  if (ctx) redirect("/");
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -22,7 +22,7 @@ export default async function LoginPage() {
 
           <h1 className="page-title mb-1">Sign in</h1>
           <p className="text-sm mb-6" style={{ color: "var(--ink-3)" }}>
-            Staff and renters use the same sign-in. Renters land in their customer portal.
+            For Everyday Storage staff.
           </p>
 
           <LoginForm />

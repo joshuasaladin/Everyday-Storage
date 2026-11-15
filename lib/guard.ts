@@ -11,12 +11,6 @@ export async function guard(cap?: Cap): Promise<Ctx> {
   return ctx;
 }
 
-export async function guardRenter(): Promise<Ctx & { renterId: string }> {
-  const ctx = await getCtx();
-  if (!ctx || ctx.user.role !== "renter" || !ctx.user.renter_id) throw new UserError("Your session has ended. Sign in again.");
-  return { ...ctx, renterId: ctx.user.renter_id };
-}
-
 /** A record must belong to the facility set the caller may see (all active facilities today). */
 export function facilityOf(ctx: Ctx, form: FormData): string {
   const picked = String(form.get("facility_id") ?? "") || ctx.facilityId || ctx.facilities[0]?.id;

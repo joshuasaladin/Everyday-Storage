@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings" };
 
 const TABS = [
-  ["business", "Business"], ["currency", "Currency & tax"], ["billing", "Billing rules"], ["invoice", "Invoice template"],
+  ["business", "Business"], ["prices", "Prices"], ["currency", "Currency & tax"], ["billing", "Billing rules"], ["invoice", "Invoice template"],
   ["notifications", "Notifications"], ["users", "Users & roles"], ["facilities", "Facilities"], ["terms", "Agreement terms"], ["integrations", "Integrations & data"],
 ] as const;
 
@@ -31,7 +31,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <ActionForm action={saveSettingsAction} submit="Save" className="panel p-5 max-w-3xl">
           <input type="hidden" name="section" value="business" />
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Business name" hint="Shown on invoices, emails and the portal."><input className="input" name="business_name" defaultValue={s.business_name} required /></Field>
+            <Field label="Business name" hint="Shown on invoices, emails and the booking page."><input className="input" name="business_name" defaultValue={s.business_name} required /></Field>
             <Field label="Legal name"><input className="input" name="legal_name" defaultValue={s.legal_name} /></Field>
             <Field label="Address" className="sm:col-span-2"><input className="input" name="business_address" defaultValue={s.business_address} /></Field>
             <Field label="Phone"><input className="input" name="business_phone" defaultValue={s.business_phone} /></Field>
@@ -39,6 +39,29 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Field label="Website"><input className="input" name="business_website" defaultValue={s.business_website} /></Field>
             <Field label="Chamber of Commerce (KvK) no."><input className="input" name="chamber_no" defaultValue={s.chamber_no} /></Field>
             <Field label="Tax ID (persoonsnummer)"><input className="input" name="tax_id" defaultValue={s.tax_id} /></Field>
+          </div>
+        </ActionForm>
+      )}
+
+      {tab === "prices" && (
+        <ActionForm action={saveSettingsAction} submit="Save prices" className="panel p-5 max-w-3xl">
+          <input type="hidden" name="section" value="prices" />
+          <p className="text-sm mb-5" style={{ color: "var(--ink-3)" }}>
+            Standard monthly prices, shown to customers on the <a className="link" href="/reserve" target="_blank">booking page</a> and filled in for you when you add a unit of that size. You can still give any single unit its own price.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-x-4 gap-y-5">
+            <Field label={`Small storage unit (${s.base_currency} / month)`} hint="1.5 × 3 × 2.4 m">
+              <input className="input" name="price_small" inputMode="decimal" defaultValue={centsInput(s.price_small_cents)} placeholder="0.00" required />
+            </Field>
+            <Field label={`Standard storage unit (${s.base_currency} / month)`} hint="3 × 3 × 2.4 m">
+              <input className="input" name="price_standard" inputMode="decimal" defaultValue={centsInput(s.price_standard_cents)} placeholder="0.00" required />
+            </Field>
+            <Field label={`Warehouse — from (${s.base_currency} / month)`} hint="Optional. Leave empty to show “Price on request”.">
+              <input className="input" name="price_warehouse_from" inputMode="decimal" defaultValue={s.price_warehouse_from_cents ? centsInput(s.price_warehouse_from_cents) : ""} placeholder="Price on request" />
+            </Field>
+            <Field label="Warehouse note" hint="Shown under the warehouse option on the booking page.">
+              <input className="input" name="warehouse_price_note" defaultValue={s.warehouse_price_note} maxLength={200} />
+            </Field>
           </div>
         </ActionForm>
       )}
@@ -223,7 +246,6 @@ function Notifications({ ctx }: { ctx: Ctx }) {
 
 function Users({ ctx }: { ctx: Ctx }) {
   const users = ctx.db.all<Record<string, any>>(`SELECT id, email, name, role, status, last_login_at, created_at FROM users WHERE role <> 'renter' ORDER BY name`);
-  const portal = ctx.db.num(`SELECT COUNT(*) FROM users WHERE role = 'renter'`);
   const roles = ROLES.filter((r) => r.value !== "owner" || ctx.user.role === "owner");
   return (
     <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
@@ -264,7 +286,6 @@ function Users({ ctx }: { ctx: Ctx }) {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 text-xs hair" style={{ color: "var(--ink-3)" }}>{portal} renter portal {portal === 1 ? "login" : "logins"} — managed from each renter's page.</div>
       </Card>
       <Card title="What each role can do">
         <ul className="space-y-3">

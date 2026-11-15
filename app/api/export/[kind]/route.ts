@@ -155,7 +155,7 @@ const EXPORTS: Record<string, Exporter> = {
           WHERE ${f.where.join(" AND ")}${s.sql} ORDER BY res.created_at`,
         [...f.params, ...s.params],
       );
-      return { columns: ["Reservation", "Facility", "Unit", "Name", "Email", "Phone", "Wanted size", "Wanted type", "Move-in", "Hold until", "Status", "Source", "Created", "Notes"], rows: rows.map((r) => [r.reservation_no, r.facility, r.unit_number, r.name, r.email, r.phone, r.desired_size, r.desired_type, r.desired_start, r.hold_until, r.status, r.source, r.created_at.slice(0, 10), r.notes]) };
+      return { columns: ["Reservation", "Facility", "Unit", "Name", "Email", "Phone", "Wanted size", "Wanted type", "Wanted area m2", "Move-in", "Hold until", "Status", "Source", "Created", "Notes"], rows: rows.map((r) => [r.reservation_no, r.facility, r.unit_number, r.name, r.email, r.phone, r.desired_size, r.desired_type, r.desired_area_m2, r.desired_start, r.hold_until, r.status, r.source, r.created_at.slice(0, 10), r.notes]) };
     },
   },
   audit: {

@@ -53,6 +53,13 @@ export const DEFAULTS = {
   late_fee_flat_cents: 2500,
   late_fee_percent_bp: 500,
 
+  // standard monthly prices shown on the booking page and pre-filled on new units
+  price_small_cents: 0,
+  price_standard_cents: 0,
+  /** 0 = "price on request" */
+  price_warehouse_from_cents: 0,
+  warehouse_price_note: "Price depends on the warehouse size and availability.",
+
   default_notice_days: 30,
   default_deposit_months: 1,
   reservation_hold_days: 7,

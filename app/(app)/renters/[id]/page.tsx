@@ -6,7 +6,7 @@ import { ConfirmButton, ModalForm } from "@/components/forms";
 import { DocumentsPanel, HistoryPanel } from "@/components/panels";
 import { requireStaff } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addCreditAction, deleteRenterAction, portalLoginAction, revealIdAction } from "@/lib/actions/renters";
+import { addCreditAction, deleteRenterAction, revealIdAction } from "@/lib/actions/renters";
 import { ID_TYPES, RENTER_STATUSES } from "@/lib/renters";
 import { AGREEMENT_STATUSES, contractProgress } from "@/lib/agreements";
 import { displayStatus } from "@/lib/billing";
@@ -38,7 +38,6 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
   );
   const invoices = money$ ? db.all<Record<string, any>>(`SELECT i.*, u.unit_number FROM invoices i LEFT JOIN units u ON u.id = i.unit_id WHERE i.renter_id = ? ORDER BY i.issue_date DESC, i.invoice_no DESC LIMIT 12`, [id]) : [];
   const payments = money$ ? db.all<Record<string, any>>(`SELECT * FROM payments WHERE renter_id = ? ORDER BY received_date DESC, payment_no DESC LIMIT 8`, [id]) : [];
-  const portal = db.one<Record<string, any>>(`SELECT id, email, status, last_login_at FROM users WHERE renter_id = ?`, [id]);
 
   return (
     <>
@@ -136,7 +135,7 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
             </Card>
           )}
 
-          <DocumentsPanel db={db} entity="renter" entityId={id} canEdit={can(role, "renters.edit")} shareable />
+          <DocumentsPanel db={db} entity="renter" entityId={id} canEdit={can(role, "renters.edit")} />
         </div>
 
         <div className="space-y-5">
@@ -154,29 +153,6 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
               )}
               {r.notes && <div><div className="label">Notes</div><Lines text={r.notes} /></div>}
             </div>
-          </Card>
-
-          <Card title="Customer portal">
-            {portal ? (
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="break-all">{portal.email}</span>
-                  <Chip tone={portal.status === "active" ? "good" : "muted"} dot>{portal.status === "active" ? "Active" : "Disabled"}</Chip>
-                </div>
-                <div style={{ color: "var(--ink-3)" }}>{portal.last_login_at ? `Last signed in ${formatDate(portal.last_login_at)}` : "Has not signed in yet"}</div>
-                {can(role, "renters.edit") && (
-                  <div className="flex flex-wrap gap-2">
-                    <ConfirmButton action={portalLoginAction} fields={{ id, mode: "create" }} label="Reset password" confirm="Issue a new temporary password? Their current one stops working." />
-                    <ConfirmButton action={portalLoginAction} fields={{ id, mode: portal.status === "active" ? "disable" : "enable" }} label={portal.status === "active" ? "Disable access" : "Enable access"} />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3 text-sm">
-                <p style={{ color: "var(--ink-3)" }}>Give this renter a login to see their unit, agreement, invoices and receipts online.</p>
-                {can(role, "renters.edit") && <ConfirmButton action={portalLoginAction} fields={{ id, mode: "create" }} label="Create portal login" icon="key" className="btn" />}
-              </div>
-            )}
           </Card>
 
           {can(role, "finance.edit") && (

@@ -60,7 +60,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         <StatCard label="Occupancy" value={percent(d.occupancy)} sub={`${d.occupied} of ${d.total} units`} tone="good" icon="chart" href="/units?status=occupied" />
         <StatCard label="Available" value={d.available} sub="ready to rent" tone="good" icon="door" href="/units?status=available" />
-        <StatCard label="Reserved" value={d.reserved} sub={`${d.holds} ${d.holds === 1 ? "hold" : "holds"} · ${d.waitlist} on waitlist`} tone="warn" icon="bookmark" href="/reservations" />
+        <StatCard label="Reserved" value={d.reserved} sub={`${d.holds} ${d.holds === 1 ? "hold" : "holds"} · ${d.waitlist} open ${d.waitlist === 1 ? "request" : "requests"}`} tone="warn" icon="bookmark" href="/reservations" />
         <StatCard label="Total units" value={d.total} sub={d.unavailable ? `${d.unavailable} offline` : "all in service"} tone="neutral" icon="building" href="/units" />
       </div>
 
@@ -159,7 +159,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               d.pendingSignatures > 0 && { href: "/agreements?status=pending_signature", icon: "pen", text: `${d.pendingSignatures} agreement${d.pendingSignatures === 1 ? "" : "s"} awaiting signature`, show: can(ctx.user.role, "agreements.view") },
               d.moveOuts.length > 0 && { href: "/agreements?status=moving_out", icon: "logout", text: `${d.moveOuts.length} move-out${d.moveOuts.length === 1 ? "" : "s"} in progress — next ${formatDate(d.moveOuts[0].move_out_date)}`, show: can(ctx.user.role, "agreements.view") },
               d.holds > 0 && { href: "/reservations", icon: "bookmark", text: `${d.holds} reservation hold${d.holds === 1 ? "" : "s"} to convert into agreements`, show: true },
-              d.waitlist > 0 && { href: "/reservations?status=waitlist", icon: "clock", text: `${d.waitlist} ${d.waitlist === 1 ? "person" : "people"} on the waitlist`, show: true },
+              d.waitlist > 0 && { href: "/reservations?status=waitlist", icon: "clock", text: `${d.waitlist} open ${d.waitlist === 1 ? "request" : "requests"} from customers to match to a unit`, show: true },
             ].filter((x): x is { href: string; icon: string; text: string; show: boolean } => Boolean(x && x.show)).map((item, i) => (
               <li key={item.href} style={{ borderTop: i ? "1px solid var(--line)" : undefined }}>
                 <Link href={item.href} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-[var(--panel-2)]">

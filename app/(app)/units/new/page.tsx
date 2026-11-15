@@ -9,7 +9,7 @@ export default async function NewUnitPage() {
   return (
     <>
       <PageHeader title="New storage unit" back={{ href: "/units", label: "Storage units" }} blurb="It appears on the facility map in the next free cell — you can move it there afterwards." />
-      <UnitForm facilities={ctx.facilities} facilityId={ctx.facilityId} currency={ctx.settings.base_currency} />
+      <UnitForm facilities={ctx.facilities} facilityId={ctx.facilityId} currency={ctx.settings.base_currency} prices={{ small: ctx.settings.price_small_cents, standard: ctx.settings.price_standard_cents }} />
     </>
   );
 }

@@ -245,7 +245,7 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
             <div className="text-xs leading-relaxed whitespace-pre-wrap" style={{ maxHeight: 260, overflow: "auto", color: "var(--ink-2)" }}>{a.terms_snapshot}</div>
           </Card>
 
-          <DocumentsPanel db={db} entity="agreement" entityId={id} canEdit={edit} shareable />
+          <DocumentsPanel db={db} entity="agreement" entityId={id} canEdit={edit} />
         </div>
 
         <div className="space-y-5">

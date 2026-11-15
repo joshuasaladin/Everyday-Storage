@@ -169,6 +169,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   phone           TEXT,
   desired_size    TEXT,
   desired_type    TEXT,
+  desired_area_m2 REAL,                       -- warehouse requests: floor area wanted
   desired_start   TEXT,
   hold_until      TEXT,
   status          TEXT NOT NULL DEFAULT 'pending'

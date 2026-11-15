@@ -59,6 +59,9 @@ export function seedDemo(db: DB): void {
       business_email: "hello@everydaystorage.aw",
       business_website: "everydaystorage.aw",
       chamber_no: "H-00000 (demo)",
+      price_small_cents: 6500,
+      price_standard_cents: 11000,
+      price_warehouse_from_cents: 18500,
     });
     db.run(`UPDATE taxes SET enabled = 1`);
 
@@ -132,7 +135,6 @@ export function seedDemo(db: DB): void {
         status: "lead", notes: i === 3 ? "Prefers WhatsApp. Pays in florins at the office." : null,
       });
     });
-    user(DEMO_RENTER_LOGIN.email, "Marisol Croes", "renter", DEMO_RENTER_LOGIN.password, renters[0]);
 
     // ---- agreements: [unit index, renter index, months ago started, term (0 = month-to-month), renewal, ended after n months?]
     type Plan = [number, number, number, number, "auto_renew" | "month_to_month" | "end", number?];

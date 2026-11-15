@@ -24,7 +24,6 @@ export function DocumentsPanel({ db, entity, entityId, canEdit, shareable }: { d
                 <a href={`/api/files/${d.id}`} target="_blank" className="link-ink text-sm font-medium break-all">{d.name}</a>
                 <div className="text-xs" style={{ color: "var(--ink-3)" }}>
                   {label(DOC_CATEGORIES, d.category)} · {fileSize(d.size_bytes)} · {d.uploaded_by} · {timeAgo(d.created_at)}
-                  {d.renter_visible ? " · visible in the renter's portal" : ""}
                 </div>
               </div>
               {canEdit && (

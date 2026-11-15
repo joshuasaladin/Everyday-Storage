@@ -26,6 +26,7 @@ export async function saveReservationAction(_prev: ActionState, form: FormData):
       phone: f.str("phone", { max: 40 }),
       desired_size: f.str("desired_size") ? f.oneOf("desired_size", UNIT_SIZES.map((s) => s.value)) : null,
       desired_type: f.str("desired_type") ? f.oneOf("desired_type", UNIT_TYPES.map((s) => s.value)) : null,
+      desired_area_m2: f.num("desired_area_m2", { min: 1, max: 10000, label: "Wanted area" }),
       desired_start: f.date("desired_start"),
       hold_until: f.date("hold_until"),
       source: "staff" as const,
@@ -35,7 +36,7 @@ export async function saveReservationAction(_prev: ActionState, form: FormData):
     if (!input.email && !input.phone) throw new UserError("Add a phone number or an email so you can reach them.");
     if (input.hold_until && input.hold_until < today()) throw new UserError("The hold date is in the past.");
     createReservation(ctx.db, ctx.actor, input);
-    return { ok: unitId ? "Unit reserved." : "Added to the waitlist." };
+    return { ok: unitId ? "Unit reserved." : "Added as an open request." };
   });
 }
 

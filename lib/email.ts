@@ -245,7 +245,7 @@ export function queueAgreementNotice(
   if (kind === "expiry_notice") {
     subject = `Your storage agreement for unit ${ag.unit_number} ends on ${formatDate(ag.end_date)}`;
     body = ag.renewal_option === "end"
-      ? `${hello}\n\nYour agreement ${ag.agreement_no} for unit ${ag.unit_number} ends on ${formatDate(ag.end_date)}. If you would like to keep the unit, reply to this email or renew from your customer portal and we will arrange it. Otherwise, please have the unit empty and your lock removed by that date.`
+      ? `${hello}\n\nYour agreement ${ag.agreement_no} for unit ${ag.unit_number} ends on ${formatDate(ag.end_date)}. If you would like to keep the unit, reply to this email and we will arrange it. Otherwise, please have the unit empty and your lock removed by that date.`
       : `${hello}\n\nThe fixed term of agreement ${ag.agreement_no} for unit ${ag.unit_number} ends on ${formatDate(ag.end_date)}. After that it continues month-to-month at ${money(ag.monthly_rate_cents - ag.discount_cents, s.base_currency)} per month, and either of us can end it with ${ag.notice_days} days' notice. If you would prefer a new fixed term, let us know.`;
   } else if (kind === "renewal_reminder") {
     subject = `Your storage agreement for unit ${ag.unit_number} renews on ${formatDate(ag.end_date)}`;

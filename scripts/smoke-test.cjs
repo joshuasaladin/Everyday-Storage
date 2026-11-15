@@ -260,17 +260,13 @@ const stamp = String(Date.now()).slice(-6);
     await c.close();
   });
 
-  await step("a renter sees only their own portal", async () => {
-    const c = await context({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  await step("customers cannot sign in", async () => {
+    const c = await context();
     const p = await c.newPage();
     await login(p, "marisol.croes@example.com", "demo-renter");
-    await p.waitForURL(`${base}/portal`);
-    await p.waitForSelector("text=Your units");
-    await shot("16-portal-mobile", p);
-    await p.goto(`${base}/renters`);
-    await p.waitForURL(`${base}/portal`);
-    const other = await p.request.get(`${invoiceUrl.replace("/invoices/", "/api/invoices/")}/pdf`);
-    if (other.status() !== 404) throw new Error(`another renter's invoice returned ${other.status()}`);
+    await p.waitForSelector("text=do not match");
+    const r = await p.request.get(`${base}/portal`);
+    if (r.status() !== 404) throw new Error(`/portal returned ${r.status()}`);
     await c.close();
   });
 
@@ -289,16 +285,44 @@ const stamp = String(Date.now()).slice(-6);
     await c.close();
   });
 
-  await step("public pages", async () => {
+  await step("booking page: choose an option, type decides size or square metres", async () => {
     const c = await context();
     const p = await c.newPage();
     await p.goto(`${base}/reserve`, { waitUntil: "networkidle" });
-    await p.waitForSelector("text=Reserve a storage unit");
+    await p.waitForSelector("text=Choose from");
+    for (const t of ["Small", "Standard", "Warehouse", "1.5 × 3 × 2.4 m", "3 × 3 × 2.4 m", "Size varies"]) await p.locator(`text=${t}`).first().waitFor();
+    if (await p.locator("text=Available now").count()) throw new Error("still lists available units");
+    if (await p.locator('a[href="/login"]').count()) throw new Error("still links to a sign-in");
+    if (await p.locator('select[name="desired_size"], input[name="desired_area_m2"]').count()) throw new Error("size shown before a type is chosen");
+    await p.selectOption('select[name="desired_type"]', "storage_unit");
+    const sizes = await p.locator('select[name="desired_size"] option:not([disabled])').allInnerTexts();
+    if (sizes.length !== 2 || !/Small/.test(sizes[0]) || !/Standard/.test(sizes[1])) throw new Error(`storage sizes: ${sizes}`);
+    await p.click('button:has-text("Choose"):near(:text("Warehouse"))');
+    await p.locator('input[name="desired_area_m2"]').waitFor();
+    if (await p.locator('select[name="desired_size"]').count()) throw new Error("warehouse still asks for a size class");
     await shot("19-reserve", p);
+    await p.fill('input[name="desired_area_m2"]', "45");
+    await p.fill('input[name="name"]', `Web Test ${stamp}`);
+    await p.fill('input[name="phone"]', "+297 555 0123");
+    await p.fill('input[name="email"]', `web${stamp}@example.com`);
+    await p.click('button:has-text("Send request")');
+    await p.waitForSelector("text=we have your request");
     await p.goto(`${base}/sign/not-a-real-token`);
     await p.waitForSelector("text=no longer valid");
     await p.goto(`${base}/units`);
     await p.waitForURL(`${base}/login`);
+    await c.close();
+  });
+
+  await step("the online request reaches staff with the area wanted (live workspace)", async () => {
+    const c = await context();
+    const p = await c.newPage();
+    const [email, password] = (process.env.SMOKE_ADMIN ?? "admin@everydaystorage.aw:storage2026").split(":");
+    await login(p, email, password);
+    await p.waitForURL(`${base}/`);
+    await p.goto(`${base}/reservations?status=waitlist`);
+    await p.waitForSelector(`text=Web Test ${stamp}`);
+    await p.waitForSelector("text=Warehouse, about 45 m²");
     await c.close();
   });
 

@@ -69,6 +69,13 @@ export async function saveSettingsAction(_prev: ActionState, form: FormData): Pr
         email_reply_to: f.email("email_reply_to") ?? "",
         automation_hour: f.int("automation_hour", { required: true, min: 0, max: 23, label: "Run hour" }) ?? 7,
       };
+    } else if (section === "prices") {
+      patch = {
+        price_small_cents: f.cents("price_small", { required: true, label: "Small storage unit price" }) ?? 0,
+        price_standard_cents: f.cents("price_standard", { required: true, label: "Standard storage unit price" }) ?? 0,
+        price_warehouse_from_cents: f.cents("price_warehouse_from", { label: "Warehouse starting price" }) ?? 0,
+        warehouse_price_note: f.str("warehouse_price_note", { max: 200 }) ?? "",
+      };
     } else if (section === "terms") {
       patch = { agreement_terms: f.text("agreement_terms", { required: true, max: 20000, label: "Agreement terms" }) ?? "" };
     } else {

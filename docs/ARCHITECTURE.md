@@ -12,7 +12,6 @@ pages read the database directly on the server; every write is a server action.
 ```
 app/
   (app)/            staff app behind the login — one folder per module
-  portal/           customer portal (renter role)
   login/ reserve/ sign/[token]/        public pages
   api/              PDFs, document download, CSV export, reports, webhook, cron, health
 components/         Shell, ui primitives, forms, charts, FacilityMap, SignaturePad, panels
@@ -90,6 +89,6 @@ prorated first partial month.
 |---|---|---|
 | 1 — Core | Auth & roles, facilities, units, facility map, renters, agreements, invoicing, payments, deposits, dashboard, reports, audit log | Built |
 | 2 — Operations | Automations & job queue, email outbox, PDF invoices/receipts/agreements, reservations & waitlist, CSV/PDF export, settings | Built |
-| 3 — Customers | Customer portal, built-in e-signature, public reservation page | Built |
+| 3 — Customers | Built-in e-signature, public booking page | Built |
 | 4 — Integrations | Payment gateway (hook + signed webhook ready; needs a provider account), real email provider credentials, external e-sign provider (fields reserved), SMS/WhatsApp reminders, accounting export | Integration points in place |
 | 5 — Scale | Postgres instead of SQLite if more than one server is needed (SQL is confined to `lib/`), S3 for documents (`lib/files.ts`), per-facility user scoping, 2-factor sign-in | Not started |

@@ -24,7 +24,7 @@ export async function loginAction(_prev: ActionState, form: FormData): Promise<A
       if (demo) result = await login("demo", email, password);
     }
     if (!result.ok) throw new UserError(result.error);
-    redirect(result.role === "renter" ? "/portal" : "/");
+    redirect("/");
   });
 }
 

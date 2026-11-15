@@ -9,14 +9,17 @@ import { centsInput } from "@/lib/format";
 
 const str = (v: unknown) => (v === null || v === undefined || v === "" || Number(v) === 0 ? "" : String(v));
 
-export default function UnitForm({ unit, facilities, facilityId, currency }: {
+export default function UnitForm({ unit, facilities, facilityId, currency, prices = {} }: {
   unit?: Record<string, any>; facilities: { id: string; name: string }[]; facilityId: string | null; currency: string;
+  /** standard monthly price per size class, in cents (Settings → Prices) */
+  prices?: Record<string, number>;
 }) {
   const [type, setType] = useState<string>(unit?.type ?? "storage_unit");
   const [size, setSize] = useState<string>(unit?.size_label ?? "standard");
   const [width, setWidth] = useState(str(unit?.width_m ?? SIZE_PRESETS.standard?.width));
   const [depth, setDepth] = useState(str(unit?.depth_m ?? SIZE_PRESETS.standard?.depth));
   const [height, setHeight] = useState(str(unit?.height_m ?? SIZE_PRESETS.standard?.height));
+  const [price, setPrice] = useState(unit ? centsInput(unit.monthly_price_cents) : prices.standard ? centsInput(prices.standard) : "");
   const preset = SIZE_PRESETS[size];
 
   const pickSize = (next: string) => {
@@ -27,6 +30,9 @@ export default function UnitForm({ unit, facilities, facilityId, currency }: {
       setDepth(String(p.depth));
       setHeight(String(p.height));
       setType("storage_unit");
+      // use the standard price, unless this unit already has a price of its own
+      const standardPrices = Object.values(prices).filter(Boolean).map((c) => centsInput(c));
+      if (prices[next] && (!price || standardPrices.includes(price))) setPrice(centsInput(prices[next]));
     } else {
       // large: sizes vary, so start empty
       setWidth("");
@@ -72,7 +78,7 @@ export default function UnitForm({ unit, facilities, facilityId, currency }: {
           <Field label="Height (m)"><input className="input" name="height_m" type="number" step="0.01" min="0" value={height} onChange={(e) => setHeight(e.target.value)} /></Field>
         </div>
         <Field label={`Monthly price (${currency})`}>
-          <input className="input" name="monthly_price" inputMode="decimal" defaultValue={centsInput(unit?.monthly_price_cents)} placeholder="0.00" required />
+          <input className="input" name="monthly_price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" required />
         </Field>
         <Field label="Location" hint="Building, row or floor.">
           <input className="input" name="location" defaultValue={unit?.location ?? ""} maxLength={120} />

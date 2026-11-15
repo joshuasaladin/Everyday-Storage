@@ -10,7 +10,7 @@ import { reservationAction, saveReservationAction } from "@/lib/actions/ops";
 import { RESERVATION_STATUSES } from "@/lib/reservations";
 import { label, UNIT_SIZES, UNIT_TYPES } from "@/lib/units";
 import { addDays, daysBetween, today } from "@/lib/clock";
-import { dims, formatDate, money } from "@/lib/format";
+import { area, dims, formatDate, money } from "@/lib/format";
 import { like, param, withQuery, type Query } from "@/lib/query";
 
 export const dynamic = "force-dynamic";
@@ -49,8 +49,8 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <PageHeader eyebrow="Rentals" title="Reservations and waitlist"
-        blurb={`Hold a unit for someone for ${settings.reservation_hold_days} days, keep a waitlist when nothing fits, and turn a hold into a signed agreement.`}
+      <PageHeader eyebrow="Rentals" title="Reservations and requests"
+        blurb={`Requests from the booking page land under Requests & waitlist. Assign a unit to hold it for ${settings.reservation_hold_days} days, then turn the hold into a signed agreement.`}
         actions={edit && <Link href="/reservations?new=1" className="btn btn-primary"><Icon name="plus" />New reservation</Link>}
       />
 
@@ -60,7 +60,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold">Public booking page</div>
             {settings.public_reservations_enabled ? (
-              <div className="text-sm break-all" style={{ color: "var(--ink-3)" }}>Share this link so customers can reserve a unit or join the waitlist: <a className="link" href={bookingUrl} target="_blank" rel="noopener">{bookingUrl}</a></div>
+              <div className="text-sm break-all" style={{ color: "var(--ink-3)" }}>Share this link so customers can request a storage unit or warehouse: <a className="link" href={bookingUrl} target="_blank" rel="noopener">{bookingUrl}</a></div>
             ) : (
               <div className="text-sm" style={{ color: "var(--ink-3)" }}>Online reservations are switched off. Turn them on under <Link className="link" href="/settings?tab=billing">Settings → Billing rules</Link>.</div>
             )}
@@ -81,18 +81,19 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
               <Field label="Name"><input className="input" name="name" required maxLength={120} /></Field>
               <Field label="Phone"><input className="input" name="phone" maxLength={40} placeholder="+297 …" /></Field>
               <Field label="Email"><input className="input" type="email" name="email" maxLength={254} /></Field>
-              <Field label="Unit to hold" className="lg:col-span-2" hint="Leave empty to add them to the waitlist instead.">
+              <Field label="Unit to hold" className="lg:col-span-2" hint="Leave empty to add them as an open request instead.">
                 <select className="select" name="unit_id" defaultValue={param(query, "unit")}>
-                  <option value="">No unit — add to the waitlist</option>
+                  <option value="">No unit yet — add as a request</option>
                   {available.map((u) => <option key={u.id} value={u.id}>{unitLabel(u)}</option>)}
                 </select>
               </Field>
               <Field label="Hold until"><input className="input" type="date" name="hold_until" min={t} defaultValue={addDays(t, settings.reservation_hold_days)} /></Field>
+              <Field label="Wanted area (m²)" hint="For a warehouse request."><input className="input" type="number" name="desired_area_m2" min={1} max={10000} step="0.5" /></Field>
               <Field label="Wanted size"><select className="select" name="desired_size" defaultValue=""><option value="">Any</option>{UNIT_SIZES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select></Field>
               <Field label="Wanted type"><select className="select" name="desired_type" defaultValue=""><option value="">Any</option>{UNIT_TYPES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</select></Field>
               <Field label="Move-in date"><input className="input" type="date" name="desired_start" min={t} /></Field>
               {ctx.facilities.length > 1 && (
-                <Field label="Facility" hint="For a waitlist entry."><select className="select" name="facility_id" defaultValue={ctx.facilityId ?? ctx.facilities[0].id}>{ctx.facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></Field>
+                <Field label="Facility" hint="For a request without a unit."><select className="select" name="facility_id" defaultValue={ctx.facilityId ?? ctx.facilities[0].id}>{ctx.facilities.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></Field>
               )}
               <Field label="Notes" className="sm:col-span-2 lg:col-span-3"><input className="input" name="notes" maxLength={1000} /></Field>
             </div>
@@ -102,7 +103,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
 
       <Tabs active={view} tabs={[
         { key: "holds", label: "Unit holds", href: tab("holds"), count: count("res.status IN ('pending','confirmed')") },
-        { key: "waitlist", label: "Waitlist", href: tab("waitlist"), count: count("res.status = 'waitlist'") },
+        { key: "waitlist", label: "Requests & waitlist", href: tab("waitlist"), count: count("res.status = 'waitlist'") },
         { key: "closed", label: "Converted & closed", href: tab("closed") },
         { key: "all", label: "All", href: tab("all") },
       ]} />
@@ -110,14 +111,15 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
         filters={[{ name: "source", label: "Source", options: [{ value: "staff", label: "Staff" }, { value: "web", label: "Online" }, { value: "portal", label: "Portal" }] }]} />
 
       {rows.length === 0 ? (
-        <Card><EmptyState title={view === "waitlist" ? "Nobody is waiting" : view === "holds" ? "No units on hold" : "Nothing here"} /></Card>
+        <Card><EmptyState title={view === "waitlist" ? "No open requests" : view === "holds" ? "No units on hold" : "Nothing here"} /></Card>
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           {rows.map((r) => {
             const left = r.hold_until ? daysBetween(t, r.hold_until) : null;
             const live = r.status === "pending" || r.status === "confirmed";
             const matches = r.status === "waitlist"
-              ? available.filter((u) => u.facility_id === r.facility_id && (!r.desired_size || u.size_label === r.desired_size) && (!r.desired_type || u.type === r.desired_type))
+              ? available.filter((u) => u.facility_id === r.facility_id && (!r.desired_size || u.size_label === r.desired_size) && (!r.desired_type || u.type === r.desired_type)
+                && (!r.desired_area_m2 || area(u) >= r.desired_area_m2))
               : [];
             return (
               <div key={r.id} className="panel p-4 flex flex-col gap-3">
@@ -133,7 +135,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
                   {r.unit_id ? (
                     <div><Link className="link" href={`/units/${r.unit_id}`}>Unit {r.unit_number}</Link> · {dims(r)} · {money(r.monthly_price_cents, cur)}/mo{ctx.facilities.length > 1 ? ` · ${r.facility_name}` : ""}</div>
                   ) : (
-                    <div>Wants: {[r.desired_size && label(UNIT_SIZES, r.desired_size), r.desired_type && label(UNIT_TYPES, r.desired_type)].filter(Boolean).join(", ") || "any unit"}{ctx.facilities.length > 1 ? ` · ${r.facility_name}` : ""}</div>
+                    <div>Wants: {r.desired_type === "warehouse" ? `Warehouse${r.desired_area_m2 ? `, about ${r.desired_area_m2} m²` : ""}` : [r.desired_size && `${label(UNIT_SIZES, r.desired_size)}`, r.desired_type && label(UNIT_TYPES, r.desired_type).toLowerCase()].filter(Boolean).join(" ") || "any unit"}{ctx.facilities.length > 1 ? ` · ${r.facility_name}` : ""}</div>
                   )}
                   {r.desired_start && <div>Move-in {formatDate(r.desired_start)}</div>}
                   {live && left !== null && <div><Chip tone={left <= 1 ? "bad" : left <= 3 ? "warn" : "neutral"}>{left < 0 ? "hold expired" : left === 0 ? "hold ends today" : `held ${left} more day${left === 1 ? "" : "s"}`}</Chip></div>}
@@ -150,7 +152,7 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
                           <input type="hidden" name="op" value="assign" />
                           <Field label="Available unit"><select className="select" name="unit_id" required>{matches.map((u) => <option key={u.id} value={u.id}>{unitLabel(u)}</option>)}</select></Field>
                         </ModalForm>
-                      ) : <span className="text-xs self-center" style={{ color: "var(--ink-3)" }}>No matching unit free yet</span>
+                      ) : <span className="text-xs self-center" style={{ color: "var(--ink-3)" }}>No matching unit free yet — waiting</span>
                     )}
                     <ConfirmButton action={reservationAction} fields={{ id: r.id, op: "cancelled" }} label={r.status === "waitlist" ? "Remove" : "Cancel"} className="btn btn-ghost btn-sm" confirm={`Cancel the reservation for ${r.name}?`} title="quiet" />
                   </div>

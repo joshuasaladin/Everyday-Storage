@@ -22,7 +22,7 @@ export default function RenterForm({ renter, canSensitive, next }: { renter?: Re
           </Field>
           <Field label="First name"><input className="input" name="first_name" defaultValue={renter?.first_name ?? ""} required maxLength={80} autoFocus={!renter} /></Field>
           <Field label="Last name"><input className="input" name="last_name" defaultValue={renter?.last_name ?? ""} maxLength={80} /></Field>
-          <Field label="Email" hint="Invoices, reminders and the portal sign-in use this address.">
+          <Field label="Email" hint="Invoices and reminders are sent to this address.">
             <input className="input" type="email" name="email" defaultValue={renter?.email ?? ""} maxLength={254} />
           </Field>
           <Field label="Phone"><input className="input" name="phone" defaultValue={renter?.phone ?? ""} maxLength={40} placeholder="+297 …" /></Field>

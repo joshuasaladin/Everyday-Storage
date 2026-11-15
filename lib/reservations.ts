@@ -22,6 +22,7 @@ export type ReservationInput = {
   phone: string | null;
   desired_size: string | null;
   desired_type: string | null;
+  desired_area_m2?: number | null;
   desired_start: string | null;
   hold_until?: string | null;
   status?: "pending" | "confirmed" | "waitlist";
@@ -50,11 +51,11 @@ export function createReservation(db: DB, actor: Actor, input: ReservationInput)
     const stamp = nowIso();
     db.run(
       `INSERT INTO reservations (id, reservation_no, facility_id, unit_id, renter_id, name, email, phone, desired_size,
-                                 desired_type, desired_start, hold_until, status, source, notes, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                 desired_type, desired_area_m2, desired_start, hold_until, status, source, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         resId, no, input.facility_id, input.unit_id, input.renter_id ?? null, input.name, input.email, input.phone,
-        input.desired_size, input.desired_type, input.desired_start,
+        input.desired_size, input.desired_type, input.desired_area_m2 ?? null, input.desired_start,
         input.unit_id ? (input.hold_until ?? addDays(today(), settings.reservation_hold_days)) : null,
         status, input.source, input.notes, stamp, stamp,
       ],

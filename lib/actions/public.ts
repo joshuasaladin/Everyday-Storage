@@ -2,14 +2,13 @@
 
 import { headers } from "next/headers";
 import { getDb, type DB } from "../db";
-import { nowIso } from "../clock";
+import { nowIso, today } from "../clock";
 import { act, Form, UserError, type ActionState } from "../validate";
 import { agreementBySignToken, signAgreement } from "../agreements";
 import { createReservation } from "../reservations";
 import { getSettings } from "../settings";
 import { queueInvoiceEmail, queuePlain } from "../email";
 import { SYSTEM } from "../audit";
-import { UNIT_SIZES, UNIT_TYPES } from "../units";
 
 /** Public endpoints have no session, so they are throttled per IP in the database. */
 function throttle(db: DB, bucket: string, ip: string | null, max: number, minutes: number) {
@@ -50,7 +49,11 @@ export async function publicSignAction(_prev: ActionState, form: FormData): Prom
   });
 }
 
-/** Online reservation from the public page. Creates a pending hold (or a waitlist entry) for staff to confirm. */
+/**
+ * A request from the public booking page. Customers choose a kind of space,
+ * not a specific unit, so this always lands as an open request (status
+ * "waitlist") for staff to match to a unit and confirm.
+ */
 export async function publicReserveAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
     const db = getDb("live");
@@ -59,30 +62,43 @@ export async function publicReserveAction(_prev: ActionState, form: FormData): P
     // a field real people never see or fill
     if (String(form.get("website") ?? "")) return { ok: "Thank you — we will be in touch." };
     const f = new Form(form);
-    const unitId = f.str("unit_id");
+    const type = f.oneOf("desired_type", ["storage_unit", "warehouse"] as const, { required: true, label: "Type" });
+    const size = type === "storage_unit" ? f.oneOf("desired_size", ["small", "standard"] as const, { required: true, label: "Size" }) : "large";
+    const areaM2 = type === "warehouse" ? f.num("desired_area_m2", { required: true, min: 1, max: 10000, label: "Square metres needed" }) : null;
     const facilityId = f.req("facility_id", { label: "Location" });
     const input = {
       facility_id: facilityId,
-      unit_id: unitId,
+      unit_id: null,
       name: f.req("name", { max: 120, label: "Your name" }),
       email: f.email("email", { required: true }),
       phone: f.req("phone", { max: 40 }),
-      desired_size: f.str("desired_size") ? f.oneOf("desired_size", UNIT_SIZES.map((s) => s.value)) : null,
-      desired_type: f.str("desired_type") ? f.oneOf("desired_type", UNIT_TYPES.map((s) => s.value)) : null,
+      desired_size: size,
+      desired_type: type,
+      desired_area_m2: areaM2,
       desired_start: f.date("desired_start", { label: "Move-in date" }),
       source: "web" as const,
       notes: f.str("notes", { max: 600 }),
     };
     f.check();
+    if (input.desired_start && input.desired_start < today()) throw new UserError("Choose a move-in date from today on.", { desired_start: "In the past" });
     if (!db.one(`SELECT 1 FROM facilities WHERE id = ? AND status = 'active'`, [facilityId])) throw new UserError("Choose a location.");
     const meta = await requestMeta();
     throttle(db, "reserve", meta.ip, 5, 60);
-    createReservation(db, { ...SYSTEM, name: "Online reservation", ip: meta.ip }, input);
+    createReservation(db, { ...SYSTEM, name: "Online request", ip: meta.ip }, input);
+    const what = type === "warehouse" ? `a warehouse of about ${areaM2} m²` : `a ${size} storage unit`;
     queuePlain(db, {
       kind: "reservation_received", to: input.email, toName: input.name,
-      subject: `We received your reservation request — ${settings.business_name}`,
-      body: `Dear ${input.name},\n\nThank you. ${unitId ? `We are holding a unit for you for ${settings.reservation_hold_days} days` : "You are on our waitlist"} and will contact you shortly to confirm the details.`,
+      subject: `We received your request — ${settings.business_name}`,
+      body: `Dear ${input.name},\n\nThank you for your request for ${what}. We will contact you shortly to confirm a unit and your move-in date.`,
     });
-    return { ok: unitId ? `Reserved. We are holding the unit for ${settings.reservation_hold_days} days and will contact you to confirm.` : "You are on the waitlist. We will contact you as soon as a matching unit is free." };
+    const office = settings.business_email || settings.email_reply_to;
+    if (office) {
+      queuePlain(db, {
+        kind: "reservation_alert", to: office,
+        subject: `New online request — ${input.name}`,
+        body: `${input.name} (${input.phone}, ${input.email}) asked for ${what}${input.desired_start ? ` from ${input.desired_start}` : ""}.${input.notes ? `\n\nNotes: ${input.notes}` : ""}\n\nSee Reservations → Requests & waitlist.`,
+      });
+    }
+    return { ok: "Thank you — we have your request and will contact you shortly to confirm a unit." };
   });
 }

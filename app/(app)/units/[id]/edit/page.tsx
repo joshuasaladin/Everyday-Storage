@@ -13,7 +13,7 @@ export default async function EditUnitPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <PageHeader title={`Edit unit ${unit.unit_number}`} back={{ href: `/units/${id}`, label: `Unit ${unit.unit_number}` }} />
-      <UnitForm unit={unit} facilities={ctx.facilities} facilityId={ctx.facilityId} currency={ctx.settings.base_currency} />
+      <UnitForm unit={unit} facilities={ctx.facilities} facilityId={ctx.facilityId} currency={ctx.settings.base_currency} prices={{ small: ctx.settings.price_small_cents, standard: ctx.settings.price_standard_cents }} />
     </>
   );
 }
