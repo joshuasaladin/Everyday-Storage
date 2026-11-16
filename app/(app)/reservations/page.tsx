@@ -54,25 +54,23 @@ export default async function ReservationsPage({ searchParams }: { searchParams:
         actions={edit && <Link href="/reservations?new=1" className="btn btn-primary"><Icon name="plus" />New reservation</Link>}
       />
 
-      {ctx.workspace === "live" && (
-        <div className="panel p-4 mb-5 flex flex-wrap items-center gap-3">
-          <Icon name="external" className="w-4 h-4 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Public booking page</div>
-            {settings.public_reservations_enabled ? (
-              <div className="text-sm break-all" style={{ color: "var(--ink-3)" }}>Share this link so customers can request a storage unit or warehouse: <a className="link" href={bookingUrl} target="_blank" rel="noopener">{bookingUrl}</a></div>
-            ) : (
-              <div className="text-sm" style={{ color: "var(--ink-3)" }}>Online reservations are switched off. Turn them on under <Link className="link" href="/settings?tab=billing">Settings → Billing rules</Link>.</div>
-            )}
-          </div>
-          {settings.public_reservations_enabled && (
-            <span className="flex gap-2">
-              <CopyButton text={bookingUrl} label="Copy link" />
-              <a href={bookingUrl} target="_blank" rel="noopener" className="btn btn-sm">Open</a>
-            </span>
+      <div className="panel p-4 mb-5 flex flex-wrap items-center gap-3">
+        <Icon name="external" className="w-4 h-4 shrink-0" />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold">Public booking page</div>
+          {settings.public_reservations_enabled ? (
+            <div className="text-sm break-all" style={{ color: "var(--ink-3)" }}>Share this link so customers can request a storage unit or warehouse: <a className="link" href={bookingUrl} target="_blank" rel="noopener">{bookingUrl}</a></div>
+          ) : (
+            <div className="text-sm" style={{ color: "var(--ink-3)" }}>Online reservations are switched off. Turn them on under <Link className="link" href="/settings?tab=billing">Settings → Billing rules</Link>.</div>
           )}
         </div>
-      )}
+        {settings.public_reservations_enabled && (
+          <span className="flex gap-2">
+            <CopyButton text={bookingUrl} label="Copy link" />
+            <a href={bookingUrl} target="_blank" rel="noopener" className="btn btn-sm">Open</a>
+          </span>
+        )}
+      </div>
 
       {param(query, "new") && edit && (
         <Card title="New reservation" className="mb-5">

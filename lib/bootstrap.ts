@@ -59,7 +59,7 @@ export const AUTOMATIONS: { key: string; name: string; description: string; conf
   },
 ];
 
-/** Reference rows every workspace needs. Safe to run on every boot. */
+/** Reference rows the app needs. Safe to run on every boot. */
 export function ensureDefaults(db: DB): void {
   const stamp = nowIso();
   db.tx(() => {
@@ -85,15 +85,7 @@ export function bootstrap(db: DB): void {
   const { syncAllUnits } = require("./units") as typeof import("./units");
   syncAllUnits(db);
 
-  if (db.workspace === "demo") {
-    if (!db.one(`SELECT 1 FROM users LIMIT 1`)) {
-      const { seedDemo } = require("./seed") as typeof import("./seed");
-      seedDemo(db);
-    }
-    return;
-  }
-
-  // live: a first facility and a first administrator, nothing else
+  // a first facility and a first administrator, nothing else
   const stamp = nowIso();
   if (!db.one(`SELECT 1 FROM facilities LIMIT 1`)) {
     db.run(

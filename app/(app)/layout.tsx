@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import Shell from "@/components/Shell";
-import { demoEnabled, hasLiveSession, requireStaff } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { navFor } from "@/lib/nav";
 import { can } from "@/lib/roles";
 
@@ -22,9 +22,6 @@ export default async function AppLayout({ children }: Readonly<{ children: React
     <Shell
       nav={navFor(role)}
       user={{ name: ctx.user.name, role }}
-      workspace={ctx.workspace}
-      demoAvailable={demoEnabled()}
-      canReturnLive={ctx.workspace === "demo" ? await hasLiveSession() : false}
       facilities={ctx.facilities.map((f) => ({ id: f.id, name: f.name }))}
       facilityId={ctx.facilityId}
       theme={theme === "light" || theme === "dark" ? theme : "system"}

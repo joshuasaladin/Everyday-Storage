@@ -42,7 +42,7 @@ export function createPaymentRequest(db: DB, actor: Actor, invoiceId: string): {
     const s = getSettings(db);
     const renter = db.one<Record<string, any>>(`SELECT * FROM renters WHERE id = ?`, [inv.renter_id])!;
     const requestId = id();
-    const live = db.workspace === "live" && gatewayConfigured();
+    const live = gatewayConfigured();
     const url = live ? buildLink(requestId, inv.balance_cents, inv.currency) : null;
     const stamp = nowIso();
     db.run(

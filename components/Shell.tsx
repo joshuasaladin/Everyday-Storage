@@ -5,14 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import type { NavGroup } from "@/lib/nav";
-import { logoutAction, setFacilityAction, setThemeAction, switchWorkspaceAction } from "@/lib/actions/session";
+import { logoutAction, setFacilityAction, setThemeAction } from "@/lib/actions/session";
 
 type Props = {
   nav: NavGroup[];
   user: { name: string; role: string };
-  workspace: "live" | "demo";
-  demoAvailable: boolean;
-  canReturnLive: boolean;
   facilities: { id: string; name: string }[];
   facilityId: string | null;
   theme: "light" | "dark" | "system";
@@ -57,7 +54,7 @@ function Menu({ button, children, align = "right" }: { button: (open: boolean) =
 
 const itemClass = "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-left hover:bg-[var(--muted-bg)]";
 
-export default function Shell({ nav, user, workspace, demoAvailable, canReturnLive, facilities, facilityId, theme, quickAdd, children }: Props) {
+export default function Shell({ nav, user, facilities, facilityId, theme, quickAdd, children }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
@@ -115,18 +112,6 @@ export default function Shell({ nav, user, workspace, demoAvailable, canReturnLi
       )}
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {workspace === "demo" && (
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1.5 text-xs font-medium no-print" style={{ background: "var(--accent)", color: "#fff" }}>
-            <span>Demo workspace — example data only. Nothing here touches your real records, and no real email is sent.</span>
-            {canReturnLive && (
-              <form action={switchWorkspaceAction}>
-                <input type="hidden" name="workspace" value="live" />
-                <button className="underline underline-offset-2 font-semibold cursor-pointer">Back to live workspace</button>
-              </form>
-            )}
-          </div>
-        )}
-
         <header
           className="sticky top-0 z-30 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 lg:px-7 h-14 backdrop-blur no-print"
           style={{ background: "color-mix(in srgb, var(--bg) 86%, transparent)", borderBottom: "1px solid var(--line)" }}
@@ -201,12 +186,6 @@ export default function Shell({ nav, user, workspace, demoAvailable, canReturnLi
                     </select>
                   </form>
                 </div>
-              )}
-              {workspace === "live" && demoAvailable && (
-                <form action={switchWorkspaceAction}>
-                  <input type="hidden" name="workspace" value="demo" />
-                  <button className={itemClass}><Icon name="sparkle" className="w-4 h-4" />Open demo workspace</button>
-                </form>
               )}
               <form action={logoutAction}>
                 <button className={itemClass}><Icon name="logout" className="w-4 h-4" />Sign out</button>

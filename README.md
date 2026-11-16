@@ -18,33 +18,30 @@ npm run dev            # http://localhost:3000
 ```
 
 Sign in with `admin@everydaystorage.aw` / `storage2026` (local default — set
-`ADMIN_EMAIL` / `ADMIN_PASSWORD` to choose your own). Once signed in, the
-demo workspace is under the account menu → **Open demo workspace**.
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` to choose your own). Only staff sign in —
+customers have no accounts.
 
 ```bash
 npm test               # billing, payment and deposit rules (15 tests)
-npm run smoke          # end-to-end browser test of the real UI (needs the app running + Playwright)
+npm run smoke          # end-to-end browser test of the real UI (see "Example data" below)
 npm run typecheck
 npm run build && npm start
 ```
 
-## Live data and demo data never mix
+## Example data (local testing only)
 
-There are two **separate database files**:
+The app has a single database of real records and never loads example data.
+For trying things out locally, or for the browser test, fill a **separate,
+empty** folder with 14 months of believable example data:
 
-| Workspace | File | What it holds |
-|---|---|---|
-| Live | `DATA_DIR/storage.db` | Your real units, renters, invoices and payments. Starts empty. |
-| Demo | `DATA_DIR/demo/storage-demo.db` | 14 months of believable example data, built by running the real billing engine. |
+```bash
+DATA_DIR=./data-example npm run seed:example
+DATA_DIR=./data-example npm run dev
+```
 
-A session belongs to one workspace; every library function is handed the
-database it must use, so nothing can cross over. The demo has its own uploads
-folder, an orange banner on every screen, and can never send real email. Reset
-it any time under Settings → Integrations & data. Set `DEMO_WORKSPACE=off` to
-remove it entirely.
-
-Demo logins (password `demo-storage`): `demo@…` (owner), `manager@…`,
-`staff@everydaystorage.aw`. Only staff sign in — customers have no accounts.
+Sign in as `owner@example.test` (or `manager@` / `staff@`), password
+`example-pass1`. The script refuses to run in production or on a database that
+already has units or renters.
 
 ## Modules
 
@@ -138,8 +135,7 @@ reminder, stage 7 days, invoice X" is sent at most once.
 **Back up** `/var/data/storage.db` and `/var/data/uploads/` regularly.
 
 **Upgrades** run themselves: on start, `lib/migrate.ts` brings an older
-database up to date (tracked by SQLite's `user_version`). The demo workspace is
-simply rebuilt.
+database up to date (tracked by SQLite's `user_version`).
 
 ## Before going live
 

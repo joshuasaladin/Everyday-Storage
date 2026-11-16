@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { id, uploadDir, type DB } from "./db";
+import { id, UPLOAD_DIR, type DB } from "./db";
 import { nowIso } from "./clock";
 import { audit, type Actor } from "./audit";
 import { UserError } from "./validate";
@@ -53,7 +53,7 @@ export async function storeDocument(
 
   const docId = id();
   const key = `${crypto.randomBytes(16).toString("hex")}.bin`;
-  const dir = uploadDir(db.workspace);
+  const dir = UPLOAD_DIR;
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, key), bytes, { mode: 0o600 });
 
@@ -72,14 +72,14 @@ export async function storeDocument(
 
 export async function readDocument(db: DB, storageKey: string): Promise<Buffer> {
   if (!/^[a-f0-9]{32}\.bin$/.test(storageKey)) throw new Error("Invalid storage key");
-  return fs.readFile(path.join(uploadDir(db.workspace), storageKey));
+  return fs.readFile(path.join(UPLOAD_DIR, storageKey));
 }
 
 export async function deleteDocument(db: DB, actor: Actor, docId: string): Promise<void> {
   const doc = db.one<Record<string, any>>(`SELECT * FROM documents WHERE id = ?`, [docId]);
   if (!doc) return;
   db.run(`DELETE FROM documents WHERE id = ?`, [docId]);
-  await fs.unlink(path.join(uploadDir(db.workspace), doc.storage_key)).catch(() => {});
+  await fs.unlink(path.join(UPLOAD_DIR, doc.storage_key)).catch(() => {});
   audit(db, actor, "delete", doc.entity, doc.entity_id, `Deleted document ${doc.name}`);
 }
 

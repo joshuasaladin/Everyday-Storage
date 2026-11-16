@@ -8,8 +8,8 @@
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "db:reset-demo": "node scripts/reset-demo.mjs",
-    "smoke": "node scripts/smoke-test.cjs"
+    "smoke": "node scripts/smoke-test.cjs",
+    "seed:example": "tsx scripts/seed-example.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",

@@ -13,6 +13,6 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const raw = await req.text();
   if (!verifySignature(raw, req.headers.get("x-signature"))) return new NextResponse("Invalid signature", { status: 401 });
-  const result = handleWebhook(getDb("live"), raw);
+  const result = handleWebhook(getDb(), raw);
   return NextResponse.json({ result: result.message }, { status: result.status });
 }

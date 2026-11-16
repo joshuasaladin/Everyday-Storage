@@ -1,4 +1,4 @@
-import { getDb, id, type DB, type Workspace } from "./db";
+import { getDb, id, type DB } from "./db";
 import { addDays, daysBetween, localHour, nowIso, today } from "./clock";
 import { audit, SYSTEM } from "./audit";
 import { getSettings } from "./settings";
@@ -216,15 +216,15 @@ export async function runDueJobs(db: DB, limit = 30): Promise<number> {
         dead ? "dead" : "failed", message, new Date(Date.now() + 2 ** attempts * 60_000).toISOString(), dead ? nowIso() : null, job.id,
       ]);
       if (dead) audit(db, SYSTEM, "job_failed", "job", job.id, `Job ${job.type} gave up after ${attempts} attempts: ${message}`);
-      console.error(`[jobs:${db.workspace}] ${job.type} failed (attempt ${attempts}):`, message);
+      console.error(`[jobs] ${job.type} failed (attempt ${attempts}):`, message);
     }
   }
   return ran;
 }
 
-/** One scheduler heartbeat for a workspace. */
-export async function tick(ws: Workspace): Promise<{ jobs: number; sent: number; failed: number }> {
-  const db = getDb(ws);
+/** One scheduler heartbeat. */
+export async function tick(): Promise<{ jobs: number; sent: number; failed: number }> {
+  const db = getDb();
   const date = today();
   if (localHour() >= getSettings(db).automation_hour) enqueue(db, "daily", { date }, `daily:${date}`);
   const jobs = await runDueJobs(db);
@@ -260,8 +260,7 @@ export function startScheduler(): void {
     if (global.__shqTicking) return; // never overlap with a slow previous beat
     global.__shqTicking = true;
     try {
-      await tick("live");
-      if (process.env.DEMO_WORKSPACE !== "off") await tick("demo");
+      await tick();
     } catch (err) {
       console.error("[jobs] tick failed:", err instanceof Error ? err.message : err);
     } finally {

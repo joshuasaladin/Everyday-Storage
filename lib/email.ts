@@ -8,8 +8,6 @@ import { invoicePdf, receiptPdf } from "./pdf";
  * Outgoing email goes through an outbox table, never straight to a provider:
  *   - dedupe_key makes "send reminder X for invoice Y" happen at most once
  *   - failures are retried with backoff, then parked as 'dead' for a person
- *   - the demo workspace always uses the "log" provider — it can never send
- *     real email, whatever the configuration says
  *
  * Providers: log (default; records the message, sends nothing),
  *            smtp (SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_SECURE),
@@ -18,7 +16,6 @@ import { invoicePdf, receiptPdf } from "./pdf";
 export type Provider = "log" | "smtp" | "resend";
 
 export function providerFor(db: DB, settings: Settings = getSettings(db)): Provider {
-  if (db.workspace === "demo") return "log";
   const p = (process.env.EMAIL_PROVIDER as Provider | undefined) ?? settings.email_provider;
   if (p === "smtp" && process.env.SMTP_HOST) return "smtp";
   if (p === "resend" && process.env.RESEND_API_KEY) return "resend";
@@ -30,8 +27,7 @@ export function providerStatus(db: DB): { provider: Provider; wanted: string; no
   const wanted = (process.env.EMAIL_PROVIDER as string | undefined) ?? s.email_provider;
   const provider = providerFor(db, s);
   let note = "Messages are recorded in the outbox but not delivered. Choose SMTP or Resend to send real email.";
-  if (db.workspace === "demo") note = "The demo workspace never sends real email — messages are only recorded in the outbox.";
-  else if (provider === "smtp") note = `Delivering through SMTP (${process.env.SMTP_HOST}).`;
+  if (provider === "smtp") note = `Delivering through SMTP (${process.env.SMTP_HOST}).`;
   else if (provider === "resend") note = "Delivering through Resend.";
   else if (wanted !== "log") note = `"${wanted}" is selected but its environment variables are not set, so messages are only recorded.`;
   return { provider, wanted, note };

@@ -1,7 +1,9 @@
 /**
- * End-to-end check through the real UI, against the demo workspace.
- *   npm run dev            (in one terminal)
- *   npm run smoke          (in another)   — screenshots land in ./screenshots
+ * End-to-end check through the real UI, against a throwaway database with
+ * example data — never your real one:
+ *   DATA_DIR=./data-example npm run seed:example
+ *   DATA_DIR=./data-example npm run dev      (in one terminal)
+ *   npm run smoke                            (in another) — screenshots land in ./screenshots
  */
 const { chromium } = require("playwright");
 const fs = require("node:fs");
@@ -39,14 +41,14 @@ const stamp = String(Date.now()).slice(-6);
   };
 
   await step("rejects a wrong password", async () => {
-    await login(page, "demo@everydaystorage.aw", "wrong-password");
+    await login(page, "owner@example.test", "wrong-password");
     await page.waitForSelector("text=do not match");
   });
-  await step("signs in to the demo workspace", async () => {
-    await login(page, "demo@everydaystorage.aw", "demo-storage");
+  await step("signs in", async () => {
+    await login(page, "owner@example.test", "example-pass1");
     await page.waitForURL(`${base}/`);
     await page.waitForSelector("text=Recurring monthly revenue");
-    await page.waitForSelector("text=Demo workspace");
+    if (await page.locator("text=/demo workspace/i").count()) throw new Error("demo workspace still mentioned");
   });
   await shot("01-dashboard");
 
@@ -225,7 +227,7 @@ const stamp = String(Date.now()).slice(-6);
     }
   });
 
-  await step("the booking link is the full public address (live workspace)", async () => {
+  await step("the booking link is the full public address ", async () => {
     const c = await context();
     const p = await c.newPage();
     const [email, password] = (process.env.SMOKE_ADMIN ?? "admin@everydaystorage.aw:storage2026").split(":");
@@ -250,7 +252,7 @@ const stamp = String(Date.now()).slice(-6);
   await step("staff cannot open financial pages", async () => {
     const c = await context();
     const p = await c.newPage();
-    await login(p, "staff@everydaystorage.aw", "demo-storage");
+    await login(p, "staff@example.test", "example-pass1");
     await p.waitForURL(`${base}/`);
     if (await p.locator("text=Recurring monthly revenue").count()) throw new Error("staff can see revenue");
     await p.goto(`${base}/invoices`);
@@ -311,7 +313,7 @@ const stamp = String(Date.now()).slice(-6);
   await step("mobile layout", async () => {
     const c = await context({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
     const p = await c.newPage();
-    await login(p, "demo@everydaystorage.aw", "demo-storage");
+    await login(p, "owner@example.test", "example-pass1");
     await p.waitForURL(`${base}/`);
     await p.waitForLoadState("networkidle");
     await shot("17-dashboard-mobile", p);
@@ -352,7 +354,7 @@ const stamp = String(Date.now()).slice(-6);
     await c.close();
   });
 
-  await step("the online request reaches staff with the area wanted (live workspace)", async () => {
+  await step("the online request reaches staff with the area wanted ", async () => {
     const c = await context();
     const p = await c.newPage();
     const [email, password] = (process.env.SMOKE_ADMIN ?? "admin@everydaystorage.aw:storage2026").split(":");

@@ -13,7 +13,7 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
 
-    # Both databases (live + demo) and every uploaded document live here,
+    # The database and every uploaded document live here,
     # so they survive deploys and restarts.
     disk:
       name: storage-hq-data

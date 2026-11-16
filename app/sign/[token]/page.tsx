@@ -14,9 +14,8 @@ export const metadata = { title: "Sign your agreement" };
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   let found: { ag: Record<string, any>; renter: Record<string, any>; unit: Record<string, any>; business: string; contact: string } | null = null;
-  for (const ws of ["live", "demo"] as const) {
-    if (ws === "demo" && process.env.DEMO_WORKSPACE === "off") continue;
-    const db = getDb(ws);
+  {
+    const db = getDb();
     const ag = agreementBySignToken(db, token);
     if (ag) {
       const settings = getSettings(db);
@@ -27,7 +26,6 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
         business: settings.business_name,
         contact: [settings.business_phone, settings.business_email].filter(Boolean).join(" · "),
       };
-      break;
     }
   }
 

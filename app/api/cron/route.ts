@@ -14,5 +14,5 @@ export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
   const given = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!secret || !safeEqual(secret, given)) return new NextResponse("Unauthorized", { status: 401 });
-  return NextResponse.json({ live: await tick("live") });
+  return NextResponse.json(await tick());
 }

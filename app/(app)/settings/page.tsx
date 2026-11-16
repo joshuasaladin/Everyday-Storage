@@ -1,7 +1,7 @@
 import { Card, Check, Chip, EmptyState, Field, Notice, PageHeader, Tabs } from "@/components/ui";
 import { ActionForm, ConfirmButton, ModalForm } from "@/components/forms";
 import { requireStaff } from "@/lib/auth";
-import { resetDemoAction, saveFacilityAction, saveSettingsAction, saveTaxAction, saveUserAction } from "@/lib/actions/admin";
+import { saveFacilityAction, saveSettingsAction, saveTaxAction, saveUserAction } from "@/lib/actions/admin";
 import { providerStatus } from "@/lib/email";
 import { gatewayConfigured } from "@/lib/gateway";
 import { ROLES } from "@/lib/roles";
@@ -179,12 +179,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Card title="E-signature">
             <div className="flex items-center justify-between gap-3 mb-2"><span className="text-sm font-medium">Built-in signing</span><Chip tone="good" dot>Active</Chip></div>
             <p className="text-sm" style={{ color: "var(--ink-3)" }}>Renters sign from a personal link or on a staff device. The signature, signer's name, time, network address and a fingerprint of the exact terms are stored with the agreement. Fields for an external provider's reference (DocuSign, Dropbox Sign) are in place if you later need one.</p>
-          </Card>
-          <Card title="Demo workspace">
-            <p className="text-sm mb-3" style={{ color: "var(--ink-3)" }}>Example data lives in a completely separate database from your real records. Open it from the account menu to train staff or try a feature safely.</p>
-            {ctx.workspace === "demo" ? (
-              <ConfirmButton action={resetDemoAction} label="Reset the demo data" icon="refresh" className="btn" confirm="Rebuild the demo workspace from scratch? Anything changed in the demo is discarded. Your live records are not touched." />
-            ) : <Notice>You are in the live workspace. Switch to the demo workspace to reset its example data.</Notice>}
           </Card>
           <Card title="Your data">
             <p className="text-sm" style={{ color: "var(--ink-3)" }}>Every list has an Export CSV button that exports exactly what is filtered. The database is a single file on the server's disk (<code>storage.db</code>) with uploads beside it — back both up regularly. Renter ID numbers are encrypted in the database and never exported.</p>

@@ -11,14 +11,14 @@ import { recordDeposit, recordPayment, reconcilePayments, depositHeld } from "./
 import { createReservation } from "./reservations";
 
 /**
- * The demo workspace: a believable 14 months of a storage business, built by
- * running the real engines (agreements → invoices → payments), so every
- * number on every screen reconciles. Dates are relative to today.
+ * Example data for local testing only: a believable 14 months of a storage
+ * business, built by running the real engines (agreements → invoices →
+ * payments), so every number reconciles. Dates are relative to today.
  *
- * This only ever runs against the demo database file.
+ * It is never loaded by the app. Run it yourself on an empty local database
+ * with `npm run seed:example` (see scripts/seed-example.ts).
  */
-export const DEMO_LOGIN = { email: "demo@everydaystorage.aw", password: "demo-storage" };
-export const DEMO_RENTER_LOGIN = { email: "marisol.croes@example.com", password: "demo-renter" };
+export const EXAMPLE_PASSWORD = "example-pass1";
 
 function rng(seed: number) {
   return () => {
@@ -43,14 +43,16 @@ const PEOPLE: [string, string, string?][] = [
 ];
 const STREETS = ["Caya G.F. Betico Croes", "Savaneta", "Paradera", "Tanki Leendert", "Ponton", "Sabana Blanco", "Noord", "Santa Cruz", "Pos Chiquito", "Malmok"];
 
-export function seedDemo(db: DB): void {
+export function seedExample(db: DB): void {
   const rand = rng(20261114);
   const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
   const T = today();
   const stamp = nowIso();
-  const actor: Actor = { id: null, name: "Demo seed", role: "system" };
+  const actor: Actor = { id: null, name: "Example data", role: "system" };
 
   db.tx(() => {
+    // the empty default facility created on first start is replaced by the example sites
+    db.run(`DELETE FROM facilities WHERE id NOT IN (SELECT facility_id FROM units)`);
     saveSettings(db, {
       business_name: "Everyday Storage Aruba",
       legal_name: "Everyday Storage Aruba V.B.A.",
@@ -58,7 +60,7 @@ export function seedDemo(db: DB): void {
       business_phone: "+297 588 0100",
       business_email: "hello@everydaystorage.aw",
       business_website: "everydaystorage.aw",
-      chamber_no: "H-00000 (demo)",
+      chamber_no: "H-00000 (example)",
       price_small_cents: 6500,
       price_standard_cents: 11000,
       price_warehouse_from_cents: 18500,
@@ -74,9 +76,9 @@ export function seedDemo(db: DB): void {
       );
       return uid;
     };
-    user(DEMO_LOGIN.email, "Demo Owner", "owner", DEMO_LOGIN.password);
-    user("manager@everydaystorage.aw", "Anouk Manager", "manager", DEMO_LOGIN.password);
-    const staffId = user("staff@everydaystorage.aw", "Dwight Staff", "staff", DEMO_LOGIN.password);
+    user("owner@example.test", "Example Owner", "owner", EXAMPLE_PASSWORD);
+    user("manager@example.test", "Anouk Manager", "manager", EXAMPLE_PASSWORD);
+    user("staff@example.test", "Dwight Staff", "staff", EXAMPLE_PASSWORD);
 
     // ---- facilities and their unit grids
     const facility = (code: string, name: string, address: string, cols: number, rows: number) => {
@@ -124,7 +126,7 @@ export function seedDemo(db: DB): void {
       const contact = business ? pick(PEOPLE.slice(0, 25)) : null;
       const fn = business ? contact![0] : first;
       const ln = business ? contact![1] : last;
-      const email = i === 0 ? DEMO_RENTER_LOGIN.email : `${(business ? first : `${fn}.${ln}`).toLowerCase().replace(/[^a-z.]+/g, "")}@example.com`;
+      const email = `${(business ? first : `${fn}.${ln}`).toLowerCase().replace(/[^a-z.]+/g, "")}@example.com`;
       return createRenter(db, {
         kind: business ? "business" : "individual",
         first_name: fn, last_name: ln, company: company ?? null, email,

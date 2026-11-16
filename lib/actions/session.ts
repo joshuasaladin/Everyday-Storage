@@ -3,13 +3,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createSession, demoEnabled, destroySession, getCtx, hasLiveSession, login, passwordProblem, setFacility, setWorkspace } from "../auth";
-import { getDb } from "../db";
+import { createSession, destroySession, getCtx, login, passwordProblem, setFacility } from "../auth";
 import { hashPassword, verifyPassword } from "../crypto";
 import { audit } from "../audit";
 import { nowIso } from "../clock";
 import { act, Form, UserError, type ActionState } from "../validate";
-import { DEMO_LOGIN } from "../seed";
 
 export async function loginAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
@@ -17,12 +15,7 @@ export async function loginAction(_prev: ActionState, form: FormData): Promise<A
     const email = f.req("email");
     const password = String(form.get("password") ?? "");
     if (!email || !password) throw new UserError("Enter your email and password.");
-    // an account is looked up in the live workspace first, then in the demo one
-    let result = await login("live", email, password);
-    if (!result.ok && demoEnabled()) {
-      const demo = getDb("demo").one(`SELECT 1 FROM users WHERE email = ?`, [email.toLowerCase()]);
-      if (demo) result = await login("demo", email, password);
-    }
+    const result = await login(email, password);
     if (!result.ok) throw new UserError(result.error);
     redirect("/");
   });
@@ -31,25 +24,6 @@ export async function loginAction(_prev: ActionState, form: FormData): Promise<A
 export async function logoutAction(): Promise<void> {
   await destroySession();
   redirect("/login");
-}
-
-export async function switchWorkspaceAction(form: FormData): Promise<void> {
-  const target = form.get("workspace") === "demo" ? "demo" : "live";
-  const ctx = await getCtx();
-  if (!ctx) redirect("/login");
-  if (target === "demo") {
-    if (!demoEnabled() || ctx.user.role === "renter") redirect("/");
-    // a signed-in staff member is given the matching demo seat
-    const db = getDb("demo");
-    const seat = db.one<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [DEMO_LOGIN.email]);
-    if (seat) await createSession("demo", seat.id);
-  } else if (await hasLiveSession()) {
-    await setWorkspace("live");
-  } else {
-    await destroySession();
-    redirect("/login");
-  }
-  redirect("/");
 }
 
 export async function setFacilityAction(form: FormData): Promise<void> {
@@ -84,7 +58,7 @@ export async function changePasswordAction(_prev: ActionState, form: FormData): 
       ctx.db.run(`DELETE FROM sessions WHERE user_id = ?`, [ctx.user.id]);
       audit(ctx.db, ctx.actor, "password", "user", ctx.user.id, "Changed their password");
     });
-    await createSession(ctx.workspace, ctx.user.id);
+    await createSession(ctx.user.id);
     return { ok: "Password updated. Other devices have been signed out." };
   });
 }

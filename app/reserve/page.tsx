@@ -11,10 +11,10 @@ export const metadata = { title: "Reserve a storage unit", robots: { index: true
 /**
  * The public booking page. It shows the three kinds of space on offer at their
  * standard prices (Settings → Prices) — never which individual units are free —
- * and only ever writes to the live workspace.
+ * and only records requests.
  */
 export default async function ReservePage() {
-  const db = getDb("live");
+  const db = getDb();
   const s = getSettings(db);
   const facilities = db.all<{ id: string; name: string }>(`SELECT id, name FROM facilities WHERE status = 'active' ORDER BY name`);
   const perMonth = taxRateBp(db) ? "per month, plus tax" : "per month";

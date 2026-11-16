@@ -16,8 +16,8 @@ app/
   api/              PDFs, document download, CSV export, reports, webhook, cron, health
 components/         Shell, ui primitives, forms, charts, FacilityMap, SignaturePad, panels
 lib/
-  db.ts             the two workspaces (live / demo) and the DB wrapper
-  bootstrap.ts      defaults, first admin, demo seed trigger
+  db.ts             the database (DATA_DIR/storage.db) and the DB wrapper
+  bootstrap.ts      defaults, first facility and first admin
   auth.ts guard.ts roles.ts api.ts     sessions, capabilities, authorisation
   units.ts renters.ts agreements.ts    domain rules
   billing.ts payments.ts               invoices, proration, late fees, credits, payments, refunds, deposits
@@ -25,7 +25,7 @@ lib/
   jobs.ts email.ts gateway.ts pdf.ts   automations, outbox, payment gateway hook, PDFs
   reports.ts report-data.ts            every figure on the dashboard and reports
   actions/          server actions, one file per area — the only write path
-  seed.ts           the demo dataset (runs the real engines)
+  seed.ts           example data for local testing (npm run seed:example)
 db/schema.sql       the schema
 tests/              node:test suite for the money rules
 scripts/smoke-test.cjs   end-to-end browser test

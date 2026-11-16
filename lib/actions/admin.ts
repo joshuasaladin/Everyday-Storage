@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { guard } from "../guard";
 import { audit } from "../audit";
-import { id, dropDemo, getDb } from "../db";
+import { id } from "../db";
 import { nowIso } from "../clock";
 import { hashPassword, randomToken } from "../crypto";
 import { createUser, passwordProblem } from "../auth";
@@ -228,7 +228,7 @@ export async function runAutomationAction(_prev: ActionState, form: FormData): P
     const ctx = await guard("automations.edit");
     const key = String(form.get("key") ?? "");
     if (key === "__tick") {
-      const r = await tick(ctx.workspace);
+      const r = await tick();
       return { ok: `Ran ${r.jobs} job${r.jobs === 1 ? "" : "s"}; ${r.sent} email${r.sent === 1 ? "" : "s"} sent${r.failed ? `, ${r.failed} failed` : ""}.` };
     }
     const result = await runAutomationNow(ctx.db, key);
@@ -248,7 +248,7 @@ export async function outboxAction(_prev: ActionState, form: FormData): Promise<
     }
     if (op === "retry_job") {
       ctx.db.run(`UPDATE jobs SET status = 'queued', attempts = 0, run_after = ?, last_error = NULL WHERE id = ? AND status IN ('failed','dead')`, [nowIso(), String(form.get("id") ?? "")]);
-      await tick(ctx.workspace);
+      await tick();
       return { ok: "Job re-queued." };
     }
     if (op === "test") {
@@ -259,15 +259,5 @@ export async function outboxAction(_prev: ActionState, form: FormData): Promise<
       return { ok: r.failed ? "Delivery failed — see the outbox for the error." : "Test message processed — check the outbox below for how it was delivered." };
     }
     throw new UserError("Unknown action.");
-  });
-}
-
-export async function resetDemoAction(_prev: ActionState, _form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("settings.edit");
-    if (ctx.workspace !== "demo") throw new UserError("Open the demo workspace first — this only ever resets example data.");
-    dropDemo();
-    getDb("demo"); // rebuilt from the seed
-    redirect("/login");
   });
 }

@@ -51,7 +51,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Card className="mb-6">
           <EmptyState
             title="No storage units yet"
-            hint="Create your units, then add renters and agreements. Or open the demo workspace from the account menu to see the app with example data."
+            hint="Create your units, then add renters and agreements."
             action={can(ctx.user.role, "units.edit") ? <Link href="/units/new" className="btn btn-primary"><Icon name="plus" />Add the first unit</Link> : undefined}
           />
         </Card>

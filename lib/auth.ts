@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getDb, id, type DB, type Workspace } from "./db";
+import { getDb, id, type DB } from "./db";
 import { nowIso } from "./clock";
 import { hashPassword, randomToken, sha256, verifyPassword } from "./crypto";
 import { can, type Cap, type Role } from "./roles";
@@ -20,7 +20,6 @@ export type Facility = { id: string; code: string; name: string };
 
 export type Ctx = {
   db: DB;
-  workspace: Workspace;
   user: User;
   actor: Actor;
   settings: Settings;
@@ -29,23 +28,15 @@ export type Ctx = {
   facilityId: string | null;
 };
 
-const TOKEN_COOKIE: Record<Workspace, string> = { live: "shq_live", demo: "shq_demo" };
-const WS_COOKIE = "shq_ws";
+const TOKEN_COOKIE = "shq_live";
 const FACILITY_COOKIE = "shq_facility";
 const SESSION_DAYS = 14;
 const MAX_FAILS = 6;
 const WINDOW_MIN = 15;
 
-export const demoEnabled = () => process.env.DEMO_WORKSPACE !== "off";
-
 async function clientIp(): Promise<string | null> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
-}
-
-export async function activeWorkspace(): Promise<Workspace> {
-  const jar = await cookies();
-  return jar.get(WS_COOKIE)?.value === "demo" && demoEnabled() ? "demo" : "live";
 }
 
 const cookieOpts = (expires: Date) => ({
@@ -56,8 +47,8 @@ const cookieOpts = (expires: Date) => ({
   expires,
 });
 
-export async function createSession(ws: Workspace, userId: string) {
-  const db = getDb(ws);
+export async function createSession(userId: string) {
+  const db = getDb();
   const token = randomToken(32);
   const expires = new Date(Date.now() + SESSION_DAYS * 864e5);
   const h = await headers();
@@ -66,22 +57,17 @@ export async function createSession(ws: Workspace, userId: string) {
   ]);
   db.run(`UPDATE users SET last_login_at = ? WHERE id = ?`, [nowIso(), userId]);
   const jar = await cookies();
-  jar.set(TOKEN_COOKIE[ws], token, cookieOpts(expires));
-  jar.set(WS_COOKIE, ws, cookieOpts(expires));
-}
-
-export async function setWorkspace(ws: Workspace) {
-  const jar = await cookies();
-  jar.set(WS_COOKIE, ws, cookieOpts(new Date(Date.now() + SESSION_DAYS * 864e5)));
+  jar.set(TOKEN_COOKIE, token, cookieOpts(expires));
+  // the old demo/live switch cookies are no longer used
+  jar.delete("shq_ws");
+  jar.delete("shq_demo");
 }
 
 export async function destroySession() {
-  const ws = await activeWorkspace();
   const jar = await cookies();
-  const token = jar.get(TOKEN_COOKIE[ws])?.value;
-  if (token) getDb(ws).run(`DELETE FROM sessions WHERE token_hash = ?`, [sha256(token)]);
-  jar.delete(TOKEN_COOKIE[ws]);
-  if (ws === "demo") jar.set(WS_COOKIE, "live", cookieOpts(new Date(Date.now() + SESSION_DAYS * 864e5)));
+  const token = jar.get(TOKEN_COOKIE)?.value;
+  if (token) getDb().run(`DELETE FROM sessions WHERE token_hash = ?`, [sha256(token)]);
+  jar.delete(TOKEN_COOKIE);
 }
 
 function userForToken(db: DB, token: string | undefined): User | null {
@@ -100,23 +86,15 @@ function userForToken(db: DB, token: string | undefined): User | null {
   return { id: row.id, email: row.email, name: row.name, role: row.role, renter_id: row.renter_id, must_change_password: row.must_change_password };
 }
 
-/** Is there a live-workspace session behind this browser (used by the demo banner's "back to live")? */
-export async function hasLiveSession(): Promise<boolean> {
-  const jar = await cookies();
-  return Boolean(userForToken(getDb("live"), jar.get(TOKEN_COOKIE.live)?.value));
-}
-
 export async function getCtx(): Promise<Ctx | null> {
-  const ws = await activeWorkspace();
-  const db = getDb(ws);
+  const db = getDb();
   const jar = await cookies();
-  const user = userForToken(db, jar.get(TOKEN_COOKIE[ws])?.value);
+  const user = userForToken(db, jar.get(TOKEN_COOKIE)?.value);
   if (!user) return null;
   const facilities = db.all<Facility>(`SELECT id, code, name FROM facilities WHERE status = 'active' ORDER BY name`);
   const picked = jar.get(FACILITY_COOKIE)?.value;
   return {
     db,
-    workspace: ws,
     user,
     actor: { id: user.id, name: user.name, role: user.role, ip: await clientIp() },
     settings: getSettings(db),
@@ -146,8 +124,8 @@ export function scope(ctx: Pick<Ctx, "facilityId">, column = "facility_id"): { s
 
 export type LoginResult = { ok: true; role: Role } | { ok: false; error: string };
 
-export async function login(ws: Workspace, emailRaw: string, password: string): Promise<LoginResult> {
-  const db = getDb(ws);
+export async function login(emailRaw: string, password: string): Promise<LoginResult> {
+  const db = getDb();
   const email = emailRaw.trim().toLowerCase();
   const ip = await clientIp();
   const since = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString();
@@ -165,7 +143,7 @@ export async function login(ws: Workspace, emailRaw: string, password: string): 
   db.run(`INSERT INTO login_attempts (email, ip, success, at) VALUES (?, ?, ?, ?)`, [email, ip, valid ? 1 : 0, nowIso()]);
   if (!valid || !user || user.role === "renter") return { ok: false, error: "That email and password do not match." };
   if (user.status !== "active") return { ok: false, error: "This account has been disabled." };
-  await createSession(ws, user.id);
+  await createSession(user.id);
   audit(db, { id: user.id, name: user.name, role: user.role, ip }, "login", "user", user.id, "Signed in");
   return { ok: true, role: user.role };
 }

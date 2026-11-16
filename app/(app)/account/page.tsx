@@ -20,7 +20,6 @@ export default async function AccountPage() {
           <div className="space-y-3">
             <Detail label="Email (sign-in)">{ctx.user.email}</Detail>
             <Detail label="Role">{titleCase(ctx.user.role)} — {ROLES.find((r) => r.value === ctx.user.role)?.blurb}</Detail>
-            <Detail label="Workspace">{ctx.workspace === "demo" ? "Demo (example data)" : "Live"}</Detail>
           </div>
           <form action={logoutAction} className="mt-5"><button className="btn">Sign out</button></form>
         </Card>

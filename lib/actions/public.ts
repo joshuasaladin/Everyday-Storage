@@ -24,7 +24,7 @@ async function requestMeta() {
   return { ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null, ua: h.get("user-agent") };
 }
 
-/** The renter signs from their personal link. Works for whichever workspace issued the token. */
+/** The renter signs from their personal link. */
 export async function publicSignAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
     const f = new Form(form);
@@ -33,11 +33,9 @@ export async function publicSignAction(_prev: ActionState, form: FormData): Prom
     f.check();
     if (!f.bool("agree")) throw new UserError("Tick the box to confirm you have read and agree to the terms.", { agree: "Required" });
     const meta = await requestMeta();
-    for (const ws of ["live", "demo"] as const) {
-      if (ws === "demo" && process.env.DEMO_WORKSPACE === "off") continue;
-      const db = getDb(ws);
-      const ag = agreementBySignToken(db, token);
-      if (!ag) continue;
+    const db = getDb();
+    const ag = agreementBySignToken(db, token);
+    if (ag) {
       throttle(db, "sign", meta.ip, 12, 30);
       signAgreement(db, { id: null, name: `${name} (renter)`, role: "renter", ip: meta.ip }, ag.id, {
         name, method: "e-sign", signature_png: String(form.get("signature") ?? ""), ip: meta.ip, user_agent: meta.ua,
@@ -56,7 +54,7 @@ export async function publicSignAction(_prev: ActionState, form: FormData): Prom
  */
 export async function publicReserveAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return act(async () => {
-    const db = getDb("live");
+    const db = getDb();
     const settings = getSettings(db);
     if (!settings.public_reservations_enabled) throw new UserError("Online reservations are not open at the moment. Please call us.");
     // a field real people never see or fill
