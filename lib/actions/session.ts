@@ -28,16 +28,6 @@ export async function loginAction(_prev: ActionState, form: FormData): Promise<A
   });
 }
 
-/** "Explore the demo" on the sign-in page: signs straight into the example data. */
-export async function demoLoginAction(): Promise<void> {
-  if (!demoEnabled()) redirect("/login");
-  const db = getDb("demo");
-  const user = db.one<{ id: string }>(`SELECT id FROM users WHERE email = ?`, [DEMO_LOGIN.email]);
-  if (!user) redirect("/login");
-  await createSession("demo", user.id);
-  redirect("/");
-}
-
 export async function logoutAction(): Promise<void> {
   await destroySession();
   redirect("/login");

@@ -18,8 +18,8 @@ npm run dev            # http://localhost:3000
 ```
 
 Sign in with `admin@everydaystorage.aw` / `storage2026` (local default — set
-`ADMIN_EMAIL` / `ADMIN_PASSWORD` to choose your own), or click **Explore the
-demo workspace** on the sign-in page.
+`ADMIN_EMAIL` / `ADMIN_PASSWORD` to choose your own). Once signed in, the
+demo workspace is under the account menu → **Open demo workspace**.
 
 ```bash
 npm test               # billing, payment and deposit rules (15 tests)

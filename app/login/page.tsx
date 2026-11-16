@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import LoginForm from "./LoginForm";
-import { demoEnabled, getCtx } from "@/lib/auth";
-import { demoLoginAction } from "@/lib/actions/session";
+import { getCtx } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign in" };
@@ -27,12 +26,6 @@ export default async function LoginPage() {
 
           <LoginForm />
 
-          {demoEnabled() && (
-            <form action={demoLoginAction} className="mt-4">
-              <button className="btn w-full">Explore the demo workspace</button>
-              <p className="hint text-center">Example data in a separate database — safe to click anything.</p>
-            </form>
-          )}
 
           <p className="text-xs mt-8" style={{ color: "var(--ink-3)" }}>
             Looking for a unit? <a className="link" href="/reserve">Reserve one online</a>. Accounts are created by an administrator.
