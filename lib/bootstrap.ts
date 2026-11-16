@@ -85,6 +85,13 @@ export function bootstrap(db: DB): void {
   const { syncAllUnits } = require("./units") as typeof import("./units");
   syncAllUnits(db);
 
+  // one-time data imports requested by the owner (each runs at most once)
+  const imp = require("./imports/current-renters-2026-11") as typeof import("./imports/current-renters-2026-11");
+  if (imp.shouldRunImport(db)) {
+    const r = imp.runCurrentRentersImport(db);
+    console.log(`[import] fresh start done: ${r.units} units, ${r.renters} renters, ${r.agreements} agreements. Backup: ${r.backup}`);
+  }
+
   // a first facility and a first administrator, nothing else
   const stamp = nowIso();
   if (!db.one(`SELECT 1 FROM facilities LIMIT 1`)) {
