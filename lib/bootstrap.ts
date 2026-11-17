@@ -91,6 +91,8 @@ export function bootstrap(db: DB): void {
     const r = imp.runCurrentRentersImport(db);
     console.log(`[import] fresh start done: ${r.units} units, ${r.renters} renters, ${r.agreements} agreements. Backup: ${r.backup}`);
   }
+  const frasa = (require("./imports/location-frasa") as typeof import("./imports/location-frasa")).runFrasaLocation(db);
+  if (frasa !== null) console.log(`[import] location set to Frasa on ${frasa} units.`);
   const hist = require("./imports/history-2026-11") as typeof import("./imports/history-2026-11");
   if (hist.shouldRunHistory(db)) {
     const r = hist.runRentHistory(db);

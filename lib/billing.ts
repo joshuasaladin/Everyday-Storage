@@ -284,7 +284,7 @@ export function generateDueInvoices(
               settings,
             );
             db.run(`UPDATE agreements SET next_period_start = ?, updated_at = ? WHERE id = ?`, [next, nowIso(), ag.id]);
-            if (settings.auto_apply_credit) applyCredits(db, invoiceId);
+            applyCredits(db, invoiceId); // anything paid ahead is used first
             const no = db.one<{ invoice_no: string }>(`SELECT invoice_no FROM invoices WHERE id = ?`, [invoiceId])!;
             audit(db, actor, "create", "invoice", invoiceId, `Generated ${no.invoice_no} for ${span}`, {
               agreement: ag.agreement_no,

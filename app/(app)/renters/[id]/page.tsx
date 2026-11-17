@@ -59,9 +59,10 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
 
       {money$ && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-          <StatCard label="Outstanding" value={money(bal.outstanding, cur)} tone={bal.outstanding ? "warn" : "good"} icon="receipt" sub={bal.outstanding ? "across open invoices" : "nothing owed"} />
-          <StatCard label="Overdue" value={money(bal.overdue, cur)} tone={bal.overdue ? "bad" : "good"} icon="alert" sub={bal.overdue ? "past the due date" : "nothing overdue"} />
           <StatCard label="Revenue" value={money(paid, cur)} tone="info" icon="chart" sub={firstStart ? `paid since ${formatDate(firstStart)}` : "paid to date"} />
+          <StatCard label="Outstanding" value={money(bal.outstanding, cur)} tone={bal.outstanding ? "warn" : "good"} icon="receipt"
+            sub={bal.credit ? `${money(bal.credit, cur)} paid ahead — used on the next invoices` : bal.outstanding ? "across open invoices" : "nothing owed"} />
+          <StatCard label="Overdue" value={money(bal.overdue, cur)} tone={bal.overdue ? "bad" : "good"} icon="alert" sub={bal.overdue ? "past the due date" : "nothing overdue"} />
           <StatCard label="Deposits held" value={money(bal.deposits, cur)} tone="neutral" icon="shield" sub="held as security, not revenue" />
         </div>
       )}

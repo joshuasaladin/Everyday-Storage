@@ -16,7 +16,7 @@ export default function PaymentFields({
       {stay && <input type="hidden" name="stay" value="1" />}
       <div className="grid grid-cols-2 gap-4">
         {renters ? (
-          <Field label="Renter" className="col-span-2" hint="The payment is applied to their oldest unpaid invoices first. It cannot be more than they owe.">
+          <Field label="Renter" className="col-span-2" hint="Applied to their oldest unpaid invoices first. Anything more is kept as credit and used automatically on their next invoices — so they can pay months ahead.">
             <select className="select" name="renter_id" defaultValue={renterId ?? ""} required>
               <option value="">Choose a renter…</option>
               {renters.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}

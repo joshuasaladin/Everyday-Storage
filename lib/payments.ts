@@ -169,12 +169,11 @@ export function recordPayment(db: DB, actor: Actor, input: PaymentInput): Paymen
       left -= use;
     }
     if (left > 0) {
-      // no credit is held for anyone: a payment can only cover what is actually owed
-      const owed = input.amount_cents - left;
-      throw new PaymentError(
-        owed > 0
-          ? `That is ${(left / 100).toFixed(2)} more than this renter owes (${(owed / 100).toFixed(2)}). Enter ${(owed / 100).toFixed(2)} or less.`
-          : "This renter has no unpaid invoices to put this payment against.",
+      // paid ahead: kept as credit and used automatically on the renter's next invoices
+      db.run(
+        `INSERT INTO credits (id, renter_id, source, payment_id, amount_cents, remaining_cents, reason, created_by, created_at)
+         VALUES (?, ?, 'overpayment', ?, ?, ?, ?, ?, ?)`,
+        [id(), input.renter_id, paymentId, left, left, `Paid ahead with ${no}`, actor.id, stamp],
       );
     }
     audit(db, actor, "create", "payment", paymentId, `Recorded ${no} — ${(input.amount_cents / 100).toFixed(2)} by ${input.method}`, {

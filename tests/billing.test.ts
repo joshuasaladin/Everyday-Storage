@@ -63,21 +63,20 @@ test("running billing twice never creates a second invoice for the same period",
   assert.throws(() => db.run(`INSERT INTO invoices (id, invoice_no, facility_id, renter_id, agreement_id, kind, period_start, issue_date, due_date, created_at, updated_at) SELECT 'dup', 'DUP', facility_id, renter_id, agreement_id, 'rent', period_start, issue_date, due_date, created_at, updated_at FROM invoices LIMIT 1`), /UNIQUE/);
 });
 
-test("partial payments, and a payment can never be more than what is owed (no credit is held)", () => {
+test("partial payments, and paying ahead: the extra is kept as credit and used on the next invoices", () => {
   const { db, renter } = setup();
   generateDueInvoices(db, { asOf: "2026-02-10" });
   const [jan, feb] = invoices(db);
   recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 2000, method: "cash", received_date: "2026-01-20", invoice_ids: [jan.id], spill: false });
   assert.deepEqual(db.one(`SELECT status, balance_cents FROM invoices WHERE id = ?`, [jan.id]), { status: "partial", balance_cents: 3484 });
-  // more than the 3484 + 10000 still owed is refused, and nothing is booked
-  assert.throws(
-    () => recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000 + 5000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" }),
-    (e: unknown) => e instanceof PaymentError && /more than this renter owes/.test(e.message),
-  );
-  assert.equal(db.num(`SELECT COUNT(*) FROM payments`), 1);
-  recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" });
+  // pays the rest of January, all of February, and two more months ahead
+  const r = recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000 + 20000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" });
+  assert.equal(r.credit_cents, 20000);
   assert.equal(db.one<any>(`SELECT status FROM invoices WHERE id = ?`, [feb.id]).status, "paid");
-  assert.equal(db.num(`SELECT COUNT(*) FROM credits`), 0);
+  generateDueInvoices(db, { asOf: "2026-04-10" });
+  const [mar, apr] = invoices(db).slice(2);
+  assert.deepEqual([mar.status, apr.status, mar.credited_cents, apr.credited_cents], ["paid", "paid", 10000, 10000]);
+  assert.equal(db.num(`SELECT COALESCE(SUM(remaining_cents), 0) FROM credits`), 0);
 });
 
 test("ticking an invoice as paid books the balance once; unticking removes it", () => {

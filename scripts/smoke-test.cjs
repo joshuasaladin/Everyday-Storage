@@ -170,12 +170,6 @@ const stamp = String(Date.now()).slice(-6);
     await page.waitForSelector("text=cannot be recorded twice");
     await page.keyboard.press("Escape");
   });
-  await step("a payment larger than what is owed is refused (no credit)", async () => {
-    await page.reload();
-    await pay("9999.00", `BT-${stamp}-over`);
-    await page.waitForSelector("text=/more than this renter owes|no unpaid invoices/");
-    await page.keyboard.press("Escape");
-  });
   await step("ticking Paid pays the balance; unticking undoes it", async () => {
     await page.reload();
     const box = page.locator('input[aria-label$=" paid"]').first();
@@ -188,6 +182,22 @@ const stamp = String(Date.now()).slice(-6);
     await page.waitForSelector(".chip:has-text('Paid')");
   });
   await shot("04-invoice");
+
+  await step("paying ahead keeps the extra as credit, shown on the renter", async () => {
+    await page.goto(renterUrl);
+    await page.waitForSelector("text=Revenue");
+    const labels = await page.locator(".stat-value").evaluateAll((els) => els.map((e) => e.parentElement.querySelector(".eyebrow")?.textContent));
+    if (labels.slice(0, 4).join(",") !== "Revenue,Outstanding,Overdue,Deposits held") throw new Error(`boxes: ${labels}`);
+    await page.goto(`${base}/payments`);
+    await page.click('button:has-text("Record payment")');
+    await page.selectOption('dialog[open] select[name="renter_id"]', renterUrl.split("/").pop());
+    await page.fill('dialog[open] input[name="amount"]', "160.00");
+    await page.selectOption('dialog[open] select[name="method"]', "cash");
+    await page.click('dialog[open] button[type="submit"]');
+    await page.waitForURL(/\/payments\/[0-9a-f-]{36}$/);
+    await page.goto(renterUrl);
+    await page.waitForSelector("text=/paid ahead/");
+  });
 
   await step("PDF invoice, receipt list and CSV export download", async () => {
     const pdf = await page.request.get(`${invoiceUrl.replace("/invoices/", "/api/invoices/")}/pdf`);

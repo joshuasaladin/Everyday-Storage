@@ -136,7 +136,7 @@ function PaymentList({ ctx, query }: { ctx: Ctx; query: Query }) {
                     <td><Link className="link" href={`/renters/${p.renter_id}`}>{renterName(p)}</Link></td>
                     <td>{methodLabel(p.method)}</td>
                     <td>{p.reference ?? "—"}</td>
-                    <td className="text-xs">{p.invoices ?? <span style={{ color: "var(--ink-3)" }}>—</span>}</td>
+                    <td className="text-xs">{p.invoices ?? <span style={{ color: "var(--ink-3)" }}>paid ahead (credit)</span>}</td>
                     <td className="r num">{money(p.amount_cents, cur)}{p.refunded_cents > 0 && <div className="text-xs" style={{ color: "var(--bad-fg)" }}>refunded {money(p.refunded_cents, cur)}</div>}</td>
                     <td>{p.method === "deposit" ? <span style={{ color: "var(--ink-3)" }}>n/a</span> : p.reconciled_at ? <Chip tone="good" dot>Yes</Chip> : <Chip tone="warn" dot>No</Chip>}</td>
                   </RowLink>

@@ -9,10 +9,12 @@ import { centsInput } from "@/lib/format";
 
 const str = (v: unknown) => (v === null || v === undefined || v === "" || Number(v) === 0 ? "" : String(v));
 
-export default function UnitForm({ unit, facilities, facilityId, currency, prices = {} }: {
+export default function UnitForm({ unit, facilities, facilityId, currency, prices = {}, defaultLocation = "" }: {
   unit?: Record<string, any>; facilities: { id: string; name: string }[]; facilityId: string | null; currency: string;
   /** standard monthly price per size class, in cents (Settings → Prices) */
   prices?: Record<string, number>;
+  /** location pre-filled on a new unit */
+  defaultLocation?: string;
 }) {
   const [type, setType] = useState<string>(unit?.type ?? "storage_unit");
   const [size, setSize] = useState<string>(unit?.size_label ?? "standard");
@@ -81,7 +83,7 @@ export default function UnitForm({ unit, facilities, facilityId, currency, price
           <input className="input" name="monthly_price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" required />
         </Field>
         <Field label="Location" hint="Building, row or floor.">
-          <input className="input" name="location" defaultValue={unit?.location ?? ""} maxLength={120} />
+          <input className="input" name="location" defaultValue={unit?.location ?? defaultLocation} maxLength={120} />
         </Field>
         <Field label="Features" hint="Climate control, drive-up access, power…" className="sm:col-span-2">
           <input className="input" name="features" defaultValue={unit?.features ?? ""} maxLength={500} />
