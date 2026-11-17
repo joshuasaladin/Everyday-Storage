@@ -1,3 +1,4 @@
+import RowLink from "@/components/RowLink";
 import Link from "next/link";
 import PaymentFields from "@/components/PaymentFields";
 import ReconcileForm from "@/components/ReconcileForm";
@@ -31,7 +32,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
   const unreconciled = db.num(`SELECT COUNT(*) FROM payments p WHERE p.reconciled_at IS NULL AND p.method <> 'deposit' AND p.status <> 'refunded'${s.sql}`, s.params);
   const monthIn = db.num(`SELECT COALESCE(SUM(p.amount_cents - p.refunded_cents), 0) FROM payments p WHERE p.method <> 'deposit' AND p.received_date >= ?${s.sql}`, [startOfMonth(t), ...s.params]);
-  const credit = db.num(`SELECT COALESCE(SUM(remaining_cents), 0) FROM credits`);
+  const yearIn = db.num(`SELECT COALESCE(SUM(p.amount_cents - p.refunded_cents), 0) FROM payments p WHERE p.method <> 'deposit' AND p.received_date >= ?${s.sql}`, [`${t.slice(0, 4)}-01-01`, ...s.params]);
   const ds = scope(ctx, "d.facility_id");
   const held = db.num(`SELECT COALESCE(SUM(CASE WHEN d.type = 'collected' THEN d.amount_cents ELSE -d.amount_cents END), 0) FROM deposit_transactions d WHERE 1 = 1${ds.sql}`, ds.params);
 
@@ -57,7 +58,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <StatCard label="Received this month" value={money(monthIn, cur)} tone="good" icon="card" sub="net of refunds" />
         <StatCard label="To reconcile" value={unreconciled} tone={unreconciled ? "warn" : "good"} icon="scale" sub="not yet matched to a statement" href="/payments?view=reconcile" />
-        <StatCard label="Renter credit" value={money(credit, cur)} tone="info" icon="wallet" sub="overpayments and goodwill credits" />
+        <StatCard label="Received this year" value={money(yearIn, cur)} tone="info" icon="chart" sub={`since 1 Jan ${t.slice(0, 4)}`} />
         <StatCard label="Deposits held" value={money(held, cur)} tone="neutral" icon="shield" sub="a liability, not revenue" href="/payments?view=deposits" />
       </div>
 
@@ -129,16 +130,16 @@ function PaymentList({ ctx, query }: { ctx: Ctx; query: Query }) {
               </thead>
               <tbody>
                 {rows.map((p) => (
-                  <tr key={p.id}>
+                  <RowLink key={p.id} href={`/payments/${p.id}`}>
                     <td className="primary"><Link href={`/payments/${p.id}`} className="link-ink">{p.payment_no}</Link></td>
                     <td className="whitespace-nowrap">{formatDate(p.received_date)}</td>
                     <td><Link className="link" href={`/renters/${p.renter_id}`}>{renterName(p)}</Link></td>
                     <td>{methodLabel(p.method)}</td>
                     <td>{p.reference ?? "—"}</td>
-                    <td className="text-xs">{p.invoices ?? <span style={{ color: "var(--ink-3)" }}>held as credit</span>}</td>
+                    <td className="text-xs">{p.invoices ?? <span style={{ color: "var(--ink-3)" }}>—</span>}</td>
                     <td className="r num">{money(p.amount_cents, cur)}{p.refunded_cents > 0 && <div className="text-xs" style={{ color: "var(--bad-fg)" }}>refunded {money(p.refunded_cents, cur)}</div>}</td>
                     <td>{p.method === "deposit" ? <span style={{ color: "var(--ink-3)" }}>n/a</span> : p.reconciled_at ? <Chip tone="good" dot>Yes</Chip> : <Chip tone="warn" dot>No</Chip>}</td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
               <tfoot><tr><td colSpan={6}>{totals.n} {totals.n === 1 ? "payment" : "payments"} in this view, net of refunds</td><td className="r num">{money(totals.total, cur)}</td><td /></tr></tfoot>

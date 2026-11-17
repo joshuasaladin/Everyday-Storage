@@ -29,3 +29,13 @@ export type UnitStatus = (typeof UNIT_STATUSES)[number]["value"];
 export function label(list: readonly { value: string; label: string }[], value: unknown): string {
   return list.find((o) => o.value === value)?.label ?? String(value ?? "—");
 }
+
+/**
+ * SQL ORDER BY terms that sort unit numbers the way people read them:
+ * 1, 2, … 10, 11 and A2 before A10 — not 1, 10, 11, 2.
+ */
+export function unitOrder(col = "u.unit_number"): string[] {
+  const prefix = `rtrim(${col}, '0123456789')`;
+  return [`${prefix} COLLATE NOCASE`, `CAST(substr(${col}, length(${prefix}) + 1) AS INTEGER)`, col];
+}
+export const unitOrderSql = (col = "u.unit_number") => unitOrder(col).join(", ");

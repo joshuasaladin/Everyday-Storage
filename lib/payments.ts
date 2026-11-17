@@ -169,10 +169,12 @@ export function recordPayment(db: DB, actor: Actor, input: PaymentInput): Paymen
       left -= use;
     }
     if (left > 0) {
-      db.run(
-        `INSERT INTO credits (id, renter_id, source, payment_id, amount_cents, remaining_cents, reason, created_by, created_at)
-         VALUES (?, ?, 'overpayment', ?, ?, ?, ?, ?, ?)`,
-        [id(), input.renter_id, paymentId, left, left, `Unallocated part of ${no}`, actor.id, stamp],
+      // no credit is held for anyone: a payment can only cover what is actually owed
+      const owed = input.amount_cents - left;
+      throw new PaymentError(
+        owed > 0
+          ? `That is ${(left / 100).toFixed(2)} more than this renter owes (${(owed / 100).toFixed(2)}). Enter ${(owed / 100).toFixed(2)} or less.`
+          : "This renter has no unpaid invoices to put this payment against.",
       );
     }
     audit(db, actor, "create", "payment", paymentId, `Recorded ${no} — ${(input.amount_cents / 100).toFixed(2)} by ${input.method}`, {
@@ -384,4 +386,56 @@ export function renterBalance(db: DB, renterId: string): { outstanding: number; 
       [renterId],
     ),
   };
+}
+
+// ------------------------------------------------------------ tick as paid
+
+const MARK = "markpaid:";
+
+/**
+ * "Paid" ticked on an invoice: books one payment for the whole balance, dated
+ * today unless given, with the method chosen in Settings. Ticking twice books
+ * nothing more (idempotency key per invoice and balance).
+ */
+export function markInvoicePaid(db: DB, actor: Actor, invoiceId: string, method: string, date: string = today()): PaymentResult {
+  const inv = db.one<{ renter_id: string; balance_cents: number; paid_cents: number; status: string; invoice_no: string; facility_id: string }>(
+    `SELECT renter_id, balance_cents, paid_cents, status, invoice_no, facility_id FROM invoices WHERE id = ?`,
+    [invoiceId],
+  );
+  if (!inv) throw new PaymentError("Invoice not found.");
+  if (inv.status === "void") throw new PaymentError("A void invoice cannot be paid.");
+  if (inv.balance_cents <= 0) throw new PaymentError("This invoice is already paid.");
+  return db.tx(() => {
+    const r = recordPayment(db, actor, {
+      renter_id: inv.renter_id, amount_cents: inv.balance_cents, method, received_date: date,
+      invoice_ids: [invoiceId], spill: false, confirm_duplicate: true, facility_id: inv.facility_id,
+      idempotency_key: `${MARK}${invoiceId}:${inv.paid_cents}`, notes: `Ticked as paid on ${inv.invoice_no}`,
+    });
+    // confirmed by the person ticking it, so there is nothing left to match against a statement
+    db.run(`UPDATE payments SET reconciled_at = ?, reconciled_by = ?, statement_ref = 'Ticked as paid' WHERE id = ? AND reconciled_at IS NULL`, [nowIso(), actor.name, r.payment_id]);
+    return r;
+  });
+}
+
+/** Untick: removes the payment(s) that ticking created. Payments entered any other way are left alone. */
+export function unmarkInvoicePaid(db: DB, actor: Actor, invoiceId: string): number {
+  return db.tx(() => {
+    const inv = db.one<{ invoice_no: string }>(`SELECT invoice_no FROM invoices WHERE id = ?`, [invoiceId]);
+    if (!inv) throw new PaymentError("Invoice not found.");
+    const ticked = db.all<{ id: string; payment_no: string; refunded_cents: number }>(
+      `SELECT id, payment_no, refunded_cents FROM payments WHERE idempotency_key LIKE ?`,
+      [`${MARK}${invoiceId}:%`],
+    );
+    if (!ticked.length) {
+      throw new PaymentError("This invoice was paid through a recorded payment, not by ticking it. Open the payment to change it.");
+    }
+    if (ticked.some((p) => p.refunded_cents > 0)) throw new PaymentError("Part of that payment was refunded, so it cannot simply be unticked.");
+    for (const p of ticked) {
+      db.run(`DELETE FROM payment_allocations WHERE payment_id = ?`, [p.id]);
+      db.run(`DELETE FROM payments WHERE id = ?`, [p.id]);
+    }
+    recalcInvoice(db, invoiceId);
+    audit(db, actor, "unpaid", "invoice", invoiceId, `${inv.invoice_no} unticked — removed ${ticked.map((p) => p.payment_no).join(", ")}`);
+    return ticked.length;
+  });
 }

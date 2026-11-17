@@ -91,6 +91,11 @@ export function bootstrap(db: DB): void {
     const r = imp.runCurrentRentersImport(db);
     console.log(`[import] fresh start done: ${r.units} units, ${r.renters} renters, ${r.agreements} agreements. Backup: ${r.backup}`);
   }
+  const hist = require("./imports/history-2026-11") as typeof import("./imports/history-2026-11");
+  if (hist.shouldRunHistory(db)) {
+    const r = hist.runRentHistory(db);
+    console.log(`[import] rent history added: ${r.invoices} paid invoices, ${(r.total_cents / 100).toFixed(2)} in total.`);
+  }
 
   // a first facility and a first administrator, nothing else
   const stamp = nowIso();

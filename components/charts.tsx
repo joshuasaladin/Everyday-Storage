@@ -68,6 +68,12 @@ function Tip({ x, width, point, series, format, currency }: { x: number; width: 
 
 const PAD = { top: 14, right: 8, bottom: 26, left: 46 };
 
+/** Room for the widest y-axis label (e.g. "Afl. 10K" needs more than "$10K"). */
+function leftPad(ticks: number[], format: Format, currency: string): number {
+  const widest = Math.max(...ticks.map((t) => fmt(t, format, currency, true).length));
+  return Math.max(PAD.left, Math.ceil(widest * 6.4) + 14);
+}
+
 /** Grouped columns: one group per label, up to three series. */
 export function BarChart({ data, series, format = "money", currency = "USD", height = 240, ariaLabel }: {
   data: Point[]; series: Series[]; format?: Format; currency?: string; height?: number; ariaLabel: string;
@@ -77,7 +83,8 @@ export function BarChart({ data, series, format = "money", currency = "USD", hei
   const max = Math.max(1, ...data.flatMap((d) => d.values));
   const ticks = scale(max, format);
   const top = ticks[ticks.length - 1];
-  const innerW = Math.max(width - PAD.left - PAD.right, 10);
+  const L = leftPad(ticks, format, currency);
+  const innerW = Math.max(width - L - PAD.right, 10);
   const innerH = height - PAD.top - PAD.bottom;
   const band = innerW / Math.max(data.length, 1);
   const gap = 2;
@@ -94,14 +101,14 @@ export function BarChart({ data, series, format = "money", currency = "USD", hei
           <svg width={width} height={height} role="img" aria-label={ariaLabel} onMouseLeave={() => setHover(null)}>
             {ticks.map((t) => (
               <g key={t}>
-                <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--axis)" : "var(--grid)"} strokeWidth={1} />
-                <text x={PAD.left - 8} y={y(t) + 3.5} textAnchor="end" fontSize={10.5} fill="var(--ink-3)" style={{ fontVariantNumeric: "tabular-nums" }}>
+                <line x1={L} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--axis)" : "var(--grid)"} strokeWidth={1} />
+                <text x={L - 8} y={y(t) + 3.5} textAnchor="end" fontSize={10.5} fill="var(--ink-3)" style={{ fontVariantNumeric: "tabular-nums" }}>
                   {fmt(t, format, currency, true)}
                 </text>
               </g>
             ))}
             {data.map((d, i) => {
-              const x0 = PAD.left + band * i + (band - groupW) / 2;
+              const x0 = L + band * i + (band - groupW) / 2;
               return (
                 <g key={d.label + i} opacity={hover === null || hover === i ? 1 : 0.45}>
                   {d.values.map((v, s) => {
@@ -115,9 +122,9 @@ export function BarChart({ data, series, format = "money", currency = "USD", hei
                     ) : null;
                   })}
                   {i % every === 0 && (
-                    <text x={PAD.left + band * i + band / 2} y={height - 8} textAnchor="middle" fontSize={10.5} fill="var(--ink-3)">{d.label}</text>
+                    <text x={L + band * i + band / 2} y={height - 8} textAnchor="middle" fontSize={10.5} fill="var(--ink-3)">{d.label}</text>
                   )}
-                  <rect x={PAD.left + band * i} y={PAD.top} width={band} height={innerH + PAD.bottom} fill="transparent"
+                  <rect x={L + band * i} y={PAD.top} width={band} height={innerH + PAD.bottom} fill="transparent"
                     tabIndex={0} aria-label={`${d.note ?? d.label}: ${series.map((s, k) => `${s.name} ${fmt(d.values[k] ?? 0, format, currency)}`).join(", ")}`}
                     onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)} style={{ outline: "none" }} />
                 </g>
@@ -126,7 +133,7 @@ export function BarChart({ data, series, format = "money", currency = "USD", hei
           </svg>
         )}
         {hover !== null && data[hover] && (
-          <Tip x={PAD.left + band * hover + band / 2} width={width} point={data[hover]} series={series} format={format} currency={currency} />
+          <Tip x={L + band * hover + band / 2} width={width} point={data[hover]} series={series} format={format} currency={currency} />
         )}
       </div>
     </div>
@@ -142,16 +149,17 @@ export function LineChart({ data, series, format = "money", currency = "USD", he
   const max = Math.max(1, ...data.flatMap((d) => d.values));
   const ticks = scale(max, format);
   const top = ticks[ticks.length - 1];
-  const innerW = Math.max(width - PAD.left - PAD.right - 8, 10);
+  const L = leftPad(ticks, format, currency);
+  const innerW = Math.max(width - L - PAD.right - 8, 10);
   const innerH = height - PAD.top - PAD.bottom;
-  const x = (i: number) => PAD.left + 4 + (data.length > 1 ? (innerW * i) / (data.length - 1) : innerW / 2);
+  const x = (i: number) => L + 4 + (data.length > 1 ? (innerW * i) / (data.length - 1) : innerW / 2);
   const y = (v: number) => PAD.top + innerH - (Math.max(v, 0) / top) * innerH;
   const every = Math.ceil(data.length / Math.max(1, Math.floor(innerW / 48)));
   const path = (s: number) => data.map((d, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.values[s] ?? 0).toFixed(1)}`).join(" ");
 
   const move = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const rel = e.clientX - rect.left - PAD.left - 4;
+    const rel = e.clientX - rect.left - L - 4;
     const i = Math.round((rel / innerW) * (data.length - 1));
     setHover(Math.max(0, Math.min(data.length - 1, i)));
   };
@@ -164,8 +172,8 @@ export function LineChart({ data, series, format = "money", currency = "USD", he
           <svg width={width} height={height} role="img" aria-label={ariaLabel} onMouseMove={move} onMouseLeave={() => setHover(null)}>
             {ticks.map((t) => (
               <g key={t}>
-                <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--axis)" : "var(--grid)"} strokeWidth={1} />
-                <text x={PAD.left - 8} y={y(t) + 3.5} textAnchor="end" fontSize={10.5} fill="var(--ink-3)" style={{ fontVariantNumeric: "tabular-nums" }}>
+                <line x1={L} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--axis)" : "var(--grid)"} strokeWidth={1} />
+                <text x={L - 8} y={y(t) + 3.5} textAnchor="end" fontSize={10.5} fill="var(--ink-3)" style={{ fontVariantNumeric: "tabular-nums" }}>
                   {fmt(t, format, currency, true)}
                 </text>
               </g>

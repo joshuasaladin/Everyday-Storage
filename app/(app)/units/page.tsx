@@ -1,3 +1,4 @@
+import RowLink from "@/components/RowLink";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { Card, EmptyState, PageHeader, StatusChip } from "@/components/ui";
@@ -5,13 +6,14 @@ import { exportUrl, Pager, SortTh, Toolbar } from "@/components/table";
 import { requireStaff, scope } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { label, UNIT_SIZES, UNIT_STATUSES, UNIT_TYPES } from "@/lib/units";
+import { unitOrder, unitOrderSql } from "@/lib/unit-options";
 import { area, dims, money, renterName } from "@/lib/format";
 import { like, listParams, param, type Query } from "@/lib/query";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Storage units" };
 
-const SORT = { unit: "u.unit_number", type: "u.type", area: "u.width_m * u.depth_m", price: "u.monthly_price_cents", status: "u.status", location: "u.location" };
+const SORT = { unit: unitOrder(), type: "u.type", area: "u.width_m * u.depth_m", price: "u.monthly_price_cents", status: "u.status", location: "u.location" };
 
 export default async function UnitsPage({ searchParams }: { searchParams: Promise<Query> }) {
   const ctx = await requireStaff("units.view");
@@ -39,7 +41,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const rows = ctx.db.all<Record<string, any>>(
     `SELECT u.*, f.name AS facility_name, a.id AS agreement_id, a.end_date, a.move_out_date,
             r.id AS renter_id, r.first_name, r.last_name, r.company, r.kind
-     ${from} ORDER BY ${list.orderBy}, u.unit_number LIMIT ? OFFSET ?`,
+     ${from} ORDER BY ${list.orderBy}, ${unitOrderSql()} LIMIT ? OFFSET ?`,
     [...params, ...s.params, list.limit, list.offset],
   );
   const cur = ctx.settings.base_currency;
@@ -87,7 +89,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
               </thead>
               <tbody>
                 {rows.map((u) => (
-                  <tr key={u.id}>
+                  <RowLink key={u.id} href={`/units/${u.id}`}>
                     <td className="primary">
                       <Link href={`/units/${u.id}`} className="link-ink">{u.unit_number}</Link>
                       {multi && <div className="text-xs font-normal" style={{ color: "var(--ink-3)" }}>{u.facility_name}</div>}
@@ -98,7 +100,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
                     <td className="r num">{money(u.monthly_price_cents, cur)}</td>
                     <td><StatusChip list={UNIT_STATUSES} value={u.status} /></td>
                     <td>{u.renter_id ? <Link className="link" href={`/renters/${u.renter_id}`}>{renterName(u)}</Link> : "—"}</td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
             </table>

@@ -44,7 +44,7 @@ export async function saveSettingsAction(_prev: ActionState, form: FormData): Pr
         prorate_first_month: f.bool("prorate_first_month"),
         invoice_lead_days: f.int("invoice_lead_days", { required: true, min: 0, max: 30, label: "Lead days" }) ?? 5,
         due_offset_days: f.int("due_offset_days", { required: true, min: 0, max: 60, label: "Due offset" }) ?? 0,
-        auto_apply_credit: f.bool("auto_apply_credit"),
+        quick_paid_method: f.oneOf("quick_paid_method", ["bank_transfer", "cash", "card", "check", "online", "other"] as const, { label: "Payment method" }),
         late_fee_enabled: f.bool("late_fee_enabled"),
         late_fee_grace_days: f.int("late_fee_grace_days", { required: true, min: 0, max: 90, label: "Grace period" }) ?? 5,
         late_fee_type: f.oneOf("late_fee_type", ["flat", "percent"] as const),

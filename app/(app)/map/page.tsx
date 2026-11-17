@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unitOrderSql } from "@/lib/unit-options";
 import FacilityMap, { type MapUnit } from "@/components/FacilityMap";
 import { PageHeader, Field, EmptyState, Card } from "@/components/ui";
 import { ModalForm } from "@/components/forms";
@@ -36,7 +37,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
        LEFT JOIN agreements a ON a.unit_id = u.id AND a.status IN ('active','pending_signature')
        LEFT JOIN renters r ON r.id = a.renter_id
        LEFT JOIN reservations res ON res.unit_id = u.id AND res.status IN ('pending','confirmed')
-      WHERE u.facility_id = ? ORDER BY u.unit_number`,
+      WHERE u.facility_id = ? ORDER BY ${unitOrderSql()}`,
     [facility.id],
   );
   const maxRow = Math.max(fac.map_rows, ...rows.map((u) => (u.map_y ?? 0) + u.map_h));

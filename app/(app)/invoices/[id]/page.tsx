@@ -1,3 +1,4 @@
+import PaidCheckbox from "@/components/PaidCheckbox";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Icon from "@/components/Icon";
@@ -7,8 +8,8 @@ import { ConfirmButton, ModalForm } from "@/components/forms";
 import { HistoryPanel } from "@/components/panels";
 import { requireStaff } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addLineAction, applyCreditAction, recordPaymentAction, removeLineAction, requestPaymentAction, sendInvoiceAction, voidInvoiceAction } from "@/lib/actions/billing";
-import { creditBalance, displayStatus } from "@/lib/billing";
+import { addLineAction, recordPaymentAction, removeLineAction, requestPaymentAction, sendInvoiceAction, voidInvoiceAction } from "@/lib/actions/billing";
+import { displayStatus } from "@/lib/billing";
 import { daysBetween, today } from "@/lib/clock";
 import { secondary } from "@/lib/settings";
 import { formatDate, formatDateTime, money, renterName, titleCase } from "@/lib/format";
@@ -39,7 +40,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const edit = can(ctx.user.role, "finance.edit");
   const open = inv.status === "open" || inv.status === "partial";
   const cur = inv.currency;
-  const credit = open ? creditBalance(db, inv.renter_id) : 0;
   const alt = secondary(settings, inv.balance_cents);
 
   return (
@@ -51,9 +51,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         actions={
           <>
             <a href={`/api/invoices/${id}/pdf`} target="_blank" className="btn"><Icon name="download" />PDF</a>
+            {edit && inv.status !== "void" && (
+              <span className="btn" style={{ cursor: "default" }}><PaidCheckbox invoiceId={id} invoiceNo={inv.invoice_no} paid={inv.status === "paid"} withLabel /></span>
+            )}
             {edit && inv.status !== "void" && <ConfirmButton action={sendInvoiceAction} fields={{ invoice_id: id }} label={inv.sent_at ? "Email again" : "Email invoice"} icon="mail" className="btn" />}
             {edit && open && (
-              <ModalForm label="Record payment" title={`Record a payment for ${inv.invoice_no}`} blurb={`${money(inv.balance_cents, cur)} is outstanding.`} action={recordPaymentAction} className="btn btn-primary" icon="card" submit="Record payment">
+              <ModalForm label="Record a different amount" title={`Record a payment for ${inv.invoice_no}`} blurb={`${money(inv.balance_cents, cur)} is outstanding.`} action={recordPaymentAction} className="btn" icon="card" submit="Record payment">
                 <PaymentFields currency={settings.base_currency} today={t} amount={inv.balance_cents} renterId={inv.renter_id} invoiceId={id} stay />
               </ModalForm>
             )}
@@ -168,12 +171,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           {edit && open && (
             <Card title="Collect">
               <div className="space-y-3">
-                {credit > 0 && (
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span>{money(credit, cur)} credit on account</span>
-                    <ConfirmButton action={applyCreditAction} fields={{ invoice_id: id }} label="Apply credit" className="btn btn-sm" />
-                  </div>
-                )}
                 <p className="text-sm" style={{ color: "var(--ink-3)" }}>Send the renter a request to pay. The invoice stays unpaid until the money actually arrives.</p>
                 <ConfirmButton action={requestPaymentAction} fields={{ invoice_id: id }} label="Send payment request" icon="mail" className="btn" />
               </div>

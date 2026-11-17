@@ -220,8 +220,6 @@ export function seedExample(db: DB): void {
         invoice_ids: [inv.id], spill: false, confirm_duplicate: true,
       });
     }
-    // one overpayment, so the credit feature has something to show
-    recordPayment(db, actor, { renter_id: renters[2], amount_cents: 5000, method: "cash", received_date: addDays(T, -6), invoice_ids: [], spill: false, confirm_duplicate: true, notes: "Paid ahead at the office" });
 
     // settle deposits for the agreements that ended
     for (const m of made.filter((x) => x.ended)) {

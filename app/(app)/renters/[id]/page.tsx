@@ -6,7 +6,7 @@ import { ConfirmButton, ModalForm } from "@/components/forms";
 import { DocumentsPanel, HistoryPanel } from "@/components/panels";
 import { requireStaff } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addCreditAction, deleteRenterAction, revealIdAction } from "@/lib/actions/renters";
+import { deleteRenterAction, revealIdAction } from "@/lib/actions/renters";
 import { ID_TYPES, RENTER_STATUSES } from "@/lib/renters";
 import { AGREEMENT_STATUSES, contractProgress } from "@/lib/agreements";
 import { displayStatus } from "@/lib/billing";
@@ -31,6 +31,9 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
   const money$ = can(role, "finance.view");
   const cur = ctx.settings.base_currency;
   const bal = renterBalance(db, id);
+  // everything this renter has paid towards invoices, net of refunds — a deposit only counts once it is applied to rent
+  const paid = db.num(`SELECT COALESCE(SUM(amount_cents - refunded_cents), 0) FROM payments WHERE renter_id = ?`, [id]);
+  const firstStart = db.one<{ d: string | null }>(`SELECT MIN(start_date) AS d FROM agreements WHERE renter_id = ? AND status IN ('active','ended')`, [id])?.d ?? null;
   const agreements = db.all<Record<string, any>>(
     `SELECT a.*, u.unit_number, f.name AS facility_name FROM agreements a JOIN units u ON u.id = a.unit_id JOIN facilities f ON f.id = a.facility_id
       WHERE a.renter_id = ? ORDER BY (a.status IN ('active','pending_signature')) DESC, a.start_date DESC`,
@@ -58,7 +61,7 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           <StatCard label="Outstanding" value={money(bal.outstanding, cur)} tone={bal.outstanding ? "warn" : "good"} icon="receipt" sub={bal.outstanding ? "across open invoices" : "nothing owed"} />
           <StatCard label="Overdue" value={money(bal.overdue, cur)} tone={bal.overdue ? "bad" : "good"} icon="alert" sub={bal.overdue ? "past the due date" : "nothing overdue"} />
-          <StatCard label="Credit on account" value={money(bal.credit, cur)} tone="info" icon="wallet" sub="applied to the next invoice" />
+          <StatCard label="Revenue" value={money(paid, cur)} tone="info" icon="chart" sub={firstStart ? `paid since ${formatDate(firstStart)}` : "paid to date"} />
           <StatCard label="Deposits held" value={money(bal.deposits, cur)} tone="neutral" icon="shield" sub="held as security, not revenue" />
         </div>
       )}
@@ -154,19 +157,6 @@ export default async function RenterPage({ params }: { params: Promise<{ id: str
               {r.notes && <div><div className="label">Notes</div><Lines text={r.notes} /></div>}
             </div>
           </Card>
-
-          {can(role, "finance.edit") && (
-            <Card title="Credit">
-              <p className="text-sm mb-3" style={{ color: "var(--ink-3)" }}>A goodwill credit reduces what the renter owes on their next invoice.</p>
-              <ModalForm label="Add a credit" title="Add a credit" action={addCreditAction} className="btn" icon="plus" submit="Add credit">
-                <input type="hidden" name="renter_id" value={id} />
-                <div className="space-y-4">
-                  <Field label={`Amount (${cur})`}><input className="input" name="amount" inputMode="decimal" placeholder="0.00" required /></Field>
-                  <Field label="Reason"><input className="input" name="reason" required maxLength={200} placeholder="e.g. Compensation for the gate outage" /></Field>
-                </div>
-              </ModalForm>
-            </Card>
-          )}
 
           <HistoryPanel db={db} entity="renter" entityId={id} />
 

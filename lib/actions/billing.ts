@@ -6,7 +6,7 @@ import { audit } from "../audit";
 import { nowIso, today } from "../clock";
 import { act, Form, UserError, type ActionState } from "../validate";
 import { addLine, applyCredits, createInvoice, recalcInvoice, voidInvoice, type LineInput } from "../billing";
-import { PAYMENT_METHODS, PaymentError, recordPayment, reconcilePayments, refundPayment, unreconcile } from "../payments";
+import { markInvoicePaid, PAYMENT_METHODS, PaymentError, recordPayment, reconcilePayments, refundPayment, unmarkInvoicePaid, unreconcile } from "../payments";
 import { processOutbox, queueInvoiceEmail, queueReceiptEmail } from "../email";
 import { createPaymentRequest } from "../gateway";
 import { toBase } from "../settings";
@@ -236,5 +236,23 @@ export async function sendReceiptAction(_prev: ActionState, form: FormData): Pro
     if (!queueReceiptEmail(ctx.db, paymentId)) throw new UserError("This renter has no email address on file.");
     await processOutbox(ctx.db);
     return { ok: "Receipt emailed." };
+  });
+}
+
+/** The "Paid" tick on an invoice. */
+export async function markPaidAction(invoiceId: string, paid: boolean): Promise<ActionState> {
+  return act(async () => {
+    const ctx = await guard("finance.edit");
+    try {
+      if (paid) {
+        const r = markInvoicePaid(ctx.db, ctx.actor, invoiceId, ctx.settings.quick_paid_method || "bank_transfer");
+        return { ok: `Paid — ${r.payment_no} recorded.` };
+      }
+      unmarkInvoicePaid(ctx.db, ctx.actor, invoiceId);
+      return { ok: "Marked unpaid again." };
+    } catch (err) {
+      if (err instanceof PaymentError) throw new UserError(err.message);
+      throw err;
+    }
   });
 }

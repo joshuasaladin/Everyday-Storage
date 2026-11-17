@@ -17,12 +17,13 @@ export type ListParams = {
 };
 
 /** `sortable` maps a public column key to the SQL it sorts by — nothing from the URL reaches SQL directly. */
-export function listParams(query: Query, sortable: Record<string, string>, defaultSort: string, defaultDir: "asc" | "desc" = "asc", pageSize = 50): ListParams {
+/** A sortable column maps to one SQL expression, or several that all take the chosen direction. */
+export function listParams(query: Query, sortable: Record<string, string | string[]>, defaultSort: string, defaultDir: "asc" | "desc" = "asc", pageSize = 50): ListParams {
   const sort = param(query, "sort") in sortable ? param(query, "sort") : defaultSort;
   const dirRaw = param(query, "dir");
   const dir = dirRaw === "asc" || dirRaw === "desc" ? dirRaw : sort === defaultSort ? defaultDir : "asc";
   const page = Math.max(1, Number.parseInt(param(query, "page") || "1", 10) || 1);
-  return { q: param(query, "q"), sort, dir, page, orderBy: `${sortable[sort]} ${dir === "desc" ? "DESC" : "ASC"}`, limit: pageSize, offset: (page - 1) * pageSize };
+  return { q: param(query, "q"), sort, dir, page, orderBy: ([] as string[]).concat(sortable[sort]).map((t) => `${t} ${dir === "desc" ? "DESC" : "ASC"}`).join(", "), limit: pageSize, offset: (page - 1) * pageSize };
 }
 
 export function withQuery(base: string, query: Query, patch: Record<string, string | number | null | undefined>): string {

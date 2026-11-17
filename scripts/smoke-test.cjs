@@ -52,6 +52,15 @@ const stamp = String(Date.now()).slice(-6);
   });
   await shot("01-dashboard");
 
+  await step("units sort by number and a whole row opens the unit", async () => {
+    await page.goto(`${base}/units?sort=unit&dir=asc`);
+    const first = await page.locator("table tbody tr td.primary a").evaluateAll((as) => as.slice(0, 3).map((a) => a.textContent.trim()));
+    if (first.join(",") !== "A01,A02,A03") throw new Error(`units start ${first}`);
+    await page.locator("table tbody tr").first().locator("td").nth(3).click();
+    await page.waitForURL(/\/units\/[0-9a-f-]{36}$/);
+    if (await page.locator("text=Credit on account").count()) throw new Error("credit still shown");
+  });
+
   await step("facility map opens a unit's details", async () => {
     await page.goto(`${base}/map`);
     await page.click('a.btn:has-text("Oranjestad")');
@@ -147,7 +156,7 @@ const stamp = String(Date.now()).slice(-6);
     if (await page.locator(".chip:has-text('Paid')").count()) throw new Error("invoice was marked paid by a payment request");
   });
   const pay = async (amount, reference) => {
-    await page.click('button:has-text("Record payment")');
+    await page.click('button:has-text("Record a different amount")');
     await page.fill('dialog[open] input[name="amount"]', amount);
     await page.fill('dialog[open] input[name="reference"]', reference);
     await page.click('dialog[open] button[type="submit"]');
@@ -161,11 +170,21 @@ const stamp = String(Date.now()).slice(-6);
     await page.waitForSelector("text=cannot be recorded twice");
     await page.keyboard.press("Escape");
   });
-  await step("paying the balance marks it paid", async () => {
+  await step("a payment larger than what is owed is refused (no credit)", async () => {
     await page.reload();
-    await page.click('button:has-text("Record payment")');
-    await page.fill('dialog[open] input[name="reference"]', `BT-${stamp}-2`);
-    await page.click('dialog[open] button[type="submit"]');
+    await pay("9999.00", `BT-${stamp}-over`);
+    await page.waitForSelector("text=/more than this renter owes|no unpaid invoices/");
+    await page.keyboard.press("Escape");
+  });
+  await step("ticking Paid pays the balance; unticking undoes it", async () => {
+    await page.reload();
+    const box = page.locator('input[aria-label$=" paid"]').first();
+    await box.check();
+    await page.waitForSelector(".chip:has-text('Paid')");
+    page.once("dialog", (d) => d.accept());
+    await box.uncheck();
+    await page.waitForSelector(".chip:has-text('Part paid')");
+    await box.check();
     await page.waitForSelector(".chip:has-text('Paid')");
   });
   await shot("04-invoice");
@@ -196,7 +215,7 @@ const stamp = String(Date.now()).slice(-6);
     await page.goto(`${base}/automations`);
     const card = page.locator(".panel", { hasText: "Monthly invoice generation" });
     await card.locator('button:has-text("Run now")').click();
-    await card.locator("text=/invoices? created/").waitFor({ timeout: 20000 });
+    await card.locator("text=/invoices? created/").first().waitFor({ timeout: 20000 });
     await card.locator('button:has-text("Run now")').click();
     await card.locator("text=0 invoices created").first().waitFor({ timeout: 20000 });
   });

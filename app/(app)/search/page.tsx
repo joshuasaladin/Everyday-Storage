@@ -1,3 +1,4 @@
+import { unitOrderSql } from "@/lib/unit-options";
 import Link from "next/link";
 import { Card, EmptyState, InvoiceChip, PageHeader, StatusChip } from "@/components/ui";
 import { requireStaff, scope } from "@/lib/auth";
@@ -20,7 +21,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const l = like(q);
   const esc = `ESCAPE '\\'`;
   const us = scope(ctx, "u.facility_id");
-  const units = q ? db.all<Record<string, any>>(`SELECT u.* FROM units u WHERE (u.unit_number LIKE ? ${esc} OR u.location LIKE ? ${esc})${us.sql} ORDER BY u.unit_number LIMIT 10`, [l, l, ...us.params]) : [];
+  const units = q ? db.all<Record<string, any>>(`SELECT u.* FROM units u WHERE (u.unit_number LIKE ? ${esc} OR u.location LIKE ? ${esc})${us.sql} ORDER BY ${unitOrderSql()} LIMIT 10`, [l, l, ...us.params]) : [];
   const renters = q ? db.all<Record<string, any>>(`SELECT id, renter_no, kind, first_name, last_name, company, email, phone, status FROM renters r WHERE r.first_name || ' ' || r.last_name LIKE ? ${esc} OR r.company LIKE ? ${esc} OR r.email LIKE ? ${esc} OR r.phone LIKE ? ${esc} OR r.renter_no LIKE ? ${esc} LIMIT 10`, [l, l, l, l, l]) : [];
   const agreements = q && can(role, "agreements.view") ? db.all<Record<string, any>>(`SELECT a.id, a.agreement_no, a.status, u.unit_number, r.first_name, r.last_name, r.company, r.kind FROM agreements a JOIN units u ON u.id = a.unit_id JOIN renters r ON r.id = a.renter_id WHERE a.agreement_no LIKE ? ${esc} LIMIT 10`, [l]) : [];
   const invoices = q && can(role, "finance.view") ? db.all<Record<string, any>>(`SELECT i.*, r.first_name, r.last_name, r.company, r.kind FROM invoices i JOIN renters r ON r.id = i.renter_id WHERE i.invoice_no LIKE ? ${esc} ORDER BY i.issue_date DESC LIMIT 10`, [l]) : [];

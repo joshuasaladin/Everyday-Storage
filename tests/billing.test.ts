@@ -8,7 +8,7 @@ import { createUnit, syncUnitStatus } from "../lib/units";
 import { createRenter } from "../lib/renters";
 import { createAgreement, signAgreement, scheduleMoveOut, processTermEnds, contractProgress } from "../lib/agreements";
 import { applyLateFees, generateDueInvoices, periodFor, voidInvoice, type AgreementRow } from "../lib/billing";
-import { depositHeld, PaymentError, recordDeposit, recordPayment, refundPayment } from "../lib/payments";
+import { depositHeld, markInvoicePaid, PaymentError, recordDeposit, recordPayment, refundPayment, unmarkInvoicePaid } from "../lib/payments";
 import { monthlySeries } from "../lib/reports";
 import { runAutomation } from "../lib/jobs";
 import { createPaymentRequest } from "../lib/gateway";
@@ -63,19 +63,37 @@ test("running billing twice never creates a second invoice for the same period",
   assert.throws(() => db.run(`INSERT INTO invoices (id, invoice_no, facility_id, renter_id, agreement_id, kind, period_start, issue_date, due_date, created_at, updated_at) SELECT 'dup', 'DUP', facility_id, renter_id, agreement_id, 'rent', period_start, issue_date, due_date, created_at, updated_at FROM invoices LIMIT 1`), /UNIQUE/);
 });
 
-test("partial payments, overpayment credit and auto-applied credit", () => {
+test("partial payments, and a payment can never be more than what is owed (no credit is held)", () => {
   const { db, renter } = setup();
   generateDueInvoices(db, { asOf: "2026-02-10" });
   const [jan, feb] = invoices(db);
   recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 2000, method: "cash", received_date: "2026-01-20", invoice_ids: [jan.id], spill: false });
   assert.deepEqual(db.one(`SELECT status, balance_cents FROM invoices WHERE id = ?`, [jan.id]), { status: "partial", balance_cents: 3484 });
-  // pays the rest of January, all of February, and 50.00 over
-  const r = recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000 + 5000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" });
-  assert.equal(r.credit_cents, 5000);
+  // more than the 3484 + 10000 still owed is refused, and nothing is booked
+  assert.throws(
+    () => recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000 + 5000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" }),
+    (e: unknown) => e instanceof PaymentError && /more than this renter owes/.test(e.message),
+  );
+  assert.equal(db.num(`SELECT COUNT(*) FROM payments`), 1);
+  recordPayment(db, SYSTEM, { renter_id: renter, amount_cents: 3484 + 10000, method: "bank_transfer", reference: "BT-1", received_date: "2026-02-02" });
   assert.equal(db.one<any>(`SELECT status FROM invoices WHERE id = ?`, [feb.id]).status, "paid");
-  generateDueInvoices(db, { asOf: "2026-03-10" });
-  const mar = invoices(db)[2];
-  assert.deepEqual([mar.credited_cents, mar.balance_cents, mar.status], [5000, 5000, "partial"]);
+  assert.equal(db.num(`SELECT COUNT(*) FROM credits`), 0);
+});
+
+test("ticking an invoice as paid books the balance once; unticking removes it", () => {
+  const { db } = setup();
+  generateDueInvoices(db, { asOf: "2026-02-10" });
+  const feb = invoices(db)[1];
+  markInvoicePaid(db, SYSTEM, feb.id, "bank_transfer", "2026-02-03");
+  assert.deepEqual(db.one(`SELECT status, balance_cents FROM invoices WHERE id = ?`, [feb.id]), { status: "paid", balance_cents: 0 });
+  assert.throws(() => markInvoicePaid(db, SYSTEM, feb.id, "bank_transfer", "2026-02-03"), PaymentError);
+  assert.equal(db.num(`SELECT COUNT(*) FROM payments`), 1);
+  unmarkInvoicePaid(db, SYSTEM, feb.id);
+  assert.deepEqual(db.one(`SELECT status, balance_cents FROM invoices WHERE id = ?`, [feb.id]), { status: "open", balance_cents: 10000 });
+  assert.equal(db.num(`SELECT COUNT(*) FROM payments`), 0);
+  // a payment entered the normal way is not removed by unticking
+  recordPayment(db, SYSTEM, { renter_id: feb.renter_id, amount_cents: 10000, method: "cash", received_date: "2026-02-04", invoice_ids: [feb.id], spill: false });
+  assert.throws(() => unmarkInvoicePaid(db, SYSTEM, feb.id), /recorded payment/);
 });
 
 test("the same payment cannot be recorded twice", () => {

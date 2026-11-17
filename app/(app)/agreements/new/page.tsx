@@ -1,4 +1,5 @@
 import AgreementForm from "@/components/AgreementForm";
+import { unitOrderSql } from "@/lib/unit-options";
 import { Notice, PageHeader } from "@/components/ui";
 import { requireStaff, scope } from "@/lib/auth";
 import { today } from "@/lib/clock";
@@ -21,7 +22,7 @@ export default async function NewAgreementPage({ searchParams }: { searchParams:
   // free units, plus the one a reservation being converted is holding
   const units = db.all<Record<string, any>>(
     `SELECT u.*, f.name AS facility_name FROM units u JOIN facilities f ON f.id = u.facility_id
-      WHERE (u.status = 'available' OR u.id = ?)${s.sql} ORDER BY f.name, u.unit_number`,
+      WHERE (u.status = 'available' OR u.id = ?)${s.sql} ORDER BY f.name, ${unitOrderSql()}`,
     [reservation?.unit_id ?? "", ...s.params],
   );
   const renters = db.all<Record<string, any>>(`SELECT id, renter_no, kind, first_name, last_name, company FROM renters ORDER BY COALESCE(NULLIF(company, ''), last_name || first_name) COLLATE NOCASE`);

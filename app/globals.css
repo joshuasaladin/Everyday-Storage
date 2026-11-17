@@ -235,6 +235,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); width
 .table tbody td { padding: .7rem .75rem; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--ink-2); }
 .table tbody tr:last-child td { border-bottom: none; }
 .table tbody tr:hover { background: var(--panel-2); }
+  .table tbody tr.row-link { cursor: pointer; }
 .table td.primary { color: var(--ink); font-weight: 550; white-space: nowrap; }
 .table .r { text-align: right; }
 .table tfoot td { padding: .7rem .75rem; border-top: 1px solid var(--line-2); font-weight: 650; color: var(--ink); }

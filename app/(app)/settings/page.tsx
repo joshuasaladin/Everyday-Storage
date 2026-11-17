@@ -5,6 +5,7 @@ import { saveFacilityAction, saveSettingsAction, saveTaxAction, saveUserAction }
 import { providerStatus } from "@/lib/email";
 import { gatewayConfigured } from "@/lib/gateway";
 import { ROLES } from "@/lib/roles";
+import { PAYMENT_METHODS } from "@/lib/payments";
 import { centsInput, formatDate, money, titleCase } from "@/lib/format";
 import { param, type Query } from "@/lib/query";
 
@@ -112,10 +113,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               </Field>
               <Field label="Billing day of the month"><input className="input" type="number" name="billing_day_default" min={1} max={28} defaultValue={s.billing_day_default} required /></Field>
               <Field label="Create invoices this many days ahead" hint="So renters receive them before the period starts."><input className="input" type="number" name="invoice_lead_days" min={0} max={30} defaultValue={s.invoice_lead_days} required /></Field>
+              <Field label="When an invoice is ticked as paid, record it as" hint="The payment method saved with the payment.">
+                <select className="select" name="quick_paid_method" defaultValue={s.quick_paid_method}>
+                  {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              </Field>
               <Field label="Due this many days after the period starts"><input className="input" type="number" name="due_offset_days" min={0} max={60} defaultValue={s.due_offset_days} required /></Field>
               <div className="sm:col-span-2 space-y-2.5">
                 <Check name="prorate_first_month" label="Prorate the first partial month by default" defaultChecked={s.prorate_first_month} />
-                <Check name="auto_apply_credit" label="Apply a renter's credit to new invoices automatically" defaultChecked={s.auto_apply_credit} />
               </div>
             </div>
           </section>

@@ -1,3 +1,5 @@
+import PaidCheckbox from "@/components/PaidCheckbox";
+import RowLink from "@/components/RowLink";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { Card, EmptyState, InvoiceChip, PageHeader, Tabs } from "@/components/ui";
@@ -54,6 +56,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
   );
   const count = (sql: string, p: unknown[] = []) => ctx.db.num(`SELECT COUNT(*) FROM invoices i WHERE ${sql}${s.sql}`, [...p, ...s.params]);
   const cur = ctx.settings.base_currency;
+  const canPay = can(ctx.user.role, "finance.edit");
   const tab = (key: string) => withQuery("/invoices", query, { status: key === "all" ? null : key, page: null });
   const filteredRenter = param(query, "renter") ? ctx.db.one<Record<string, any>>(`SELECT * FROM renters WHERE id = ?`, [param(query, "renter")]) : null;
 
@@ -100,11 +103,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                   <SortTh col="total" label="Total" base="/invoices" query={query} list={list} right />
                   <SortTh col="balance" label="Balance" base="/invoices" query={query} list={list} right />
                   <th>Status</th>
+                  {canPay && <th>Paid</th>}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((i) => (
-                  <tr key={i.id}>
+                  <RowLink key={i.id} href={`/invoices/${i.id}`}>
                     <td className="primary"><Link href={`/invoices/${i.id}`} className="link-ink">{i.invoice_no}</Link></td>
                     <td><Link className="link" href={`/renters/${i.renter_id}`}>{renterName(i)}</Link></td>
                     <td>{i.unit_number ?? "—"}</td>
@@ -114,11 +118,14 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                     <td className="r num">{money(i.total_cents, i.currency)}</td>
                     <td className="r num" style={i.balance_cents > 0 ? { color: "var(--ink)", fontWeight: 600 } : undefined}>{money(i.balance_cents, i.currency)}</td>
                     <td><InvoiceChip status={displayStatus(i as never, t)} /></td>
-                  </tr>
+                    {canPay && (
+                      <td>{i.status !== "void" && <PaidCheckbox invoiceId={i.id} invoiceNo={i.invoice_no} paid={i.status === "paid"} />}</td>
+                    )}
+                  </RowLink>
                 ))}
               </tbody>
               <tfoot>
-                <tr><td colSpan={6}>{totals.n} {totals.n === 1 ? "invoice" : "invoices"} in this view</td><td className="r num">{money(totals.total, cur)}</td><td className="r num">{money(totals.balance, cur)}</td><td /></tr>
+                <tr><td colSpan={6}>{totals.n} {totals.n === 1 ? "invoice" : "invoices"} in this view</td><td className="r num">{money(totals.total, cur)}</td><td className="r num">{money(totals.balance, cur)}</td><td />{canPay && <td />}</tr>
               </tfoot>
             </table>
           </div>

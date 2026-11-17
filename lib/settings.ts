@@ -45,7 +45,9 @@ export const DEFAULTS = {
   prorate_first_month: true,
   invoice_lead_days: 5,
   due_offset_days: 0,
-  auto_apply_credit: true,
+  auto_apply_credit: false,
+  /** how a payment is recorded when an invoice is ticked as paid */
+  quick_paid_method: "bank_transfer",
 
   late_fee_enabled: true,
   late_fee_grace_days: 5,

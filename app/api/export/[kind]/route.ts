@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unitOrderSql } from "@/lib/unit-options";
 import { csvResponse } from "@/lib/api";
 import { getCtx, scope, type Ctx } from "@/lib/auth";
 import { audit } from "@/lib/audit";
@@ -42,7 +43,7 @@ const EXPORTS: Record<string, Exporter> = {
       const rows = ctx.db.all<Record<string, any>>(
         `SELECT u.*, f.name AS facility, r.first_name, r.last_name, r.company, r.kind, a.agreement_no FROM units u JOIN facilities f ON f.id = u.facility_id
            LEFT JOIN agreements a ON a.unit_id = u.id AND a.status IN ('active','pending_signature') LEFT JOIN renters r ON r.id = a.renter_id
-          WHERE ${f.where.join(" AND ")}${s.sql} ORDER BY f.name, u.unit_number`,
+          WHERE ${f.where.join(" AND ")}${s.sql} ORDER BY f.name, ${unitOrderSql()}`,
         [...f.params, ...s.params],
       );
       return {

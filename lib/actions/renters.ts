@@ -6,7 +6,6 @@ import { audit } from "../audit";
 import { nowIso } from "../clock";
 import { act, Form, UserError, type ActionState } from "../validate";
 import { createRenter, ID_TYPES, renterDeleteBlocker, renterIdNumber, updateRenter, type RenterInput } from "../renters";
-import { addManualCredit } from "../billing";
 import { can } from "../roles";
 import { renterName } from "../format";
 
@@ -69,19 +68,5 @@ export async function revealIdAction(_prev: ActionState, form: FormData): Promis
     if (!value) throw new UserError("No ID number is stored for this renter.");
     audit(ctx.db, ctx.actor, "reveal_id", "renter", renterId, "Viewed the stored ID number");
     return { ok: value };
-  });
-}
-
-export async function addCreditAction(_prev: ActionState, form: FormData): Promise<ActionState> {
-  return act(async () => {
-    const ctx = await guard("finance.edit");
-    const f = new Form(form);
-    const renterId = f.req("renter_id");
-    const cents = f.cents("amount", { required: true, min: 1 }) ?? 0;
-    const reason = f.req("reason", { max: 200 });
-    f.check();
-    if (!ctx.db.one(`SELECT 1 FROM renters WHERE id = ?`, [renterId])) throw new UserError("Renter not found.");
-    addManualCredit(ctx.db, ctx.actor, renterId, cents, reason);
-    return { ok: "Credit added." };
   });
 }

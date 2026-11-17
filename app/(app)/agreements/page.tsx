@@ -1,3 +1,4 @@
+import RowLink from "@/components/RowLink";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { Card, Chip, EmptyState, Meter, PageHeader, StatusChip, Tabs } from "@/components/ui";
@@ -7,12 +8,13 @@ import { can } from "@/lib/roles";
 import { AGREEMENT_STATUSES, contractProgress } from "@/lib/agreements";
 import { addDays, today } from "@/lib/clock";
 import { formatDate, money, renterName } from "@/lib/format";
+import { unitOrder } from "@/lib/unit-options";
 import { like, listParams, param, withQuery, type Query } from "@/lib/query";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agreements" };
 
-const SORT = { no: "a.agreement_no", renter: "COALESCE(NULLIF(r.company, ''), r.last_name || r.first_name) COLLATE NOCASE", unit: "u.unit_number", start: "a.start_date", end: "COALESCE(a.end_date, '9999')", rate: "a.monthly_rate_cents" };
+const SORT = { no: "a.agreement_no", renter: "COALESCE(NULLIF(r.company, ''), r.last_name || r.first_name) COLLATE NOCASE", unit: unitOrder(), start: "a.start_date", end: "COALESCE(a.end_date, '9999')", rate: "a.monthly_rate_cents" };
 
 export default async function AgreementsPage({ searchParams }: { searchParams: Promise<Query> }) {
   const ctx = await requireStaff("agreements.view");
@@ -96,7 +98,7 @@ export default async function AgreementsPage({ searchParams }: { searchParams: P
                 {rows.map((a) => {
                   const p = contractProgress(a as never);
                   return (
-                    <tr key={a.id}>
+                    <RowLink key={a.id} href={`/agreements/${a.id}`}>
                       <td className="primary"><Link href={`/agreements/${a.id}`} className="link-ink">{a.agreement_no}</Link></td>
                       <td><Link className="link" href={`/renters/${a.renter_id}`}>{renterName(a)}</Link></td>
                       <td><Link className="link-ink" href={`/units/${a.unit_id}`}>{a.unit_number}</Link></td>
@@ -115,7 +117,7 @@ export default async function AgreementsPage({ searchParams }: { searchParams: P
                         <StatusChip list={AGREEMENT_STATUSES} value={a.status} />
                         {a.move_out_date && a.status === "active" && <div className="mt-1"><Chip tone="warn">out {formatDate(a.move_out_date)}</Chip></div>}
                       </td>
-                    </tr>
+                    </RowLink>
                   );
                 })}
               </tbody>
